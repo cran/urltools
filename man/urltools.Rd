@@ -10,4 +10,8 @@ parsing, and parameter extraction, designed to be both fast and
 entirely vectorised. It is intended to be useful for people dealing with
 web-related datasets, such as server-side logs.
 }
+\seealso{
+\link{url_decode}, \link{url_encode}, \link{extract_parameter}, \link{replace_parameter},
+\link{url_parse}, \link{extract_host}
+}
 

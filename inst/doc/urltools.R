@@ -21,6 +21,6 @@
 #  #[1] "https"            "en.wikipedia.org" ""                 "wiki/article"     ""                 ""
 
 ## ----, eval=FALSE--------------------------------------------------------
-#  url_param(urls = "https://en.wikipedia.org/w/api.php?action=sitematrix&format=xml&smstate=all", parameter = "smstate")
+#  url_extract_param(urls = "https://en.wikipedia.org/w/api.php?action=sitematrix&format=xml&smstate=all", parameter = "smstate")
 #  #[1] "all"
 

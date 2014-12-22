@@ -268,10 +268,10 @@ again, fully vectorised, and can happily be run over hundreds of thousands of UR
 </code></pre>
 
 <p>One of the fields, as mentioned, is the query string - commonly used as a component of web form requests
-or API calls. Along with <code>url_parse</code>, we also have <code>url_param</code>, which extracts the value
+or API calls. Along with <code>url_parse</code>, we also have <code>url_extract_param</code>, which extracts the value
 a particular query parameter holds:</p>
 
-<pre><code class="r">url_param(urls = &quot;https://en.wikipedia.org/w/api.php?action=sitematrix&amp;format=xml&amp;smstate=all&quot;, parameter = &quot;smstate&quot;)
+<pre><code class="r">url_extract_param(urls = &quot;https://en.wikipedia.org/w/api.php?action=sitematrix&amp;format=xml&amp;smstate=all&quot;, parameter = &quot;smstate&quot;)
 #[1] &quot;all&quot;
 </code></pre>
 
