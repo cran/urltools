@@ -5,6 +5,8 @@ __Author:__ Oliver Keyes<br/>
 __License:__ [MIT](http://opensource.org/licenses/MIT)<br/>
 __Status:__ In development
 
+![downloads](http://cranlogs.r-pkg.org/badges/grand-total/urltools)
+
 ###Description
 
 URLs in R are often treated as nothing more than part of data retrieval -
@@ -21,7 +23,12 @@ crucial for large datasets. For more information, see the [urltools vignette](ht
 
 ###Installation
 
-The latest released version can be obtained [from CRAN](http://cran.r-project.org/web/packages/urltools/). To get the development version:
+The latest released version can be obtained via:
+
+    library(devtools)
+    install_github("ironholds/urltools", ref = "1.0.0")
+
+To get the development version:
 
     library(devtools)
     install_github("ironholds/urltools")

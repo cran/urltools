@@ -1,146 +1,181 @@
-#include <Rcpp.h>
 #include "parsing.h"
-using namespace Rcpp;
 
-//URL parser
-std::vector < std::string > parsing::parse_url(std::string url, bool normalise){
+//Lower case a string
+std::string parsing::str_tolower(std::string& url){
   
-  //Output object
-  std::vector < std::string > output;
-  
-  //Normalise, if wanted
-  if(normalise){
-    url = parsing::str_tolower(url);
+  unsigned int string_size = url.size();
+  for(unsigned int i = 0; i < string_size; i++){
+    url[i] = tolower(url[i]);
   }
+  return url;
   
-  //Extract hostname field
+}
+
+std::string parsing::scheme(std::string& url){
+  std::string output;
   std::size_t protocol = url.find("://");
   if((protocol == std::string::npos) | (protocol > 6)){
     //If that's not present, or isn't present at the /beginning/, unknown
-    output.push_back("");
+    output = "";
   } else {
-    output.push_back(url.substr(0,protocol));
+    output = url.substr(0,protocol);
     url = url.substr((protocol+3));
   }
+  return output;
+}
+
+std::vector < std::string > parsing::domain_and_port(std::string& url){
   
-  //Extract domain, detect if a port is included and extract that if so
+  std::vector < std::string > output(2);
   std::size_t domain = url.find("/");
   if(domain == std::string::npos){
-    output.push_back("");
-    output.push_back("");
-  } else {
-    std::string holding = url.substr(0,domain);
-    url = url.substr((domain+1));
-    std::size_t port = holding.find(":");
-    if(port == std::string::npos){
-      output.push_back(holding);
-      output.push_back("");
-    } else {
-      output.push_back(holding.substr(0,port));
-      output.push_back(holding.substr(port+1));
-    }
+    output[0] = url;
+    output[1] = "";
+    url = "";
+    return output;
   }
   
-  //Extract path
+  std::string holding = url.substr(0,domain);
+  url = url.substr((domain+1));
+  std::size_t port = holding.find(":");
+  if(port == std::string::npos){
+    output[0] = holding;
+    output[1] = "";
+    return output;
+  }
+  
+  output[0] = holding.substr(0,port);
+  output[1] = holding.substr(port+1);
+  return output;
+}
+
+std::string parsing::path(std::string& url){
+  std::string output;
   std::size_t path = url.find("?");
   if(path == std::string::npos){
-    output.push_back(url);
-    output.push_back("");
-    output.push_back("");
-    return output;
-  } else {
-    output.push_back(url.substr(0,path));
-    url = url.substr(path+1);
-  }
-  
-  //Query and, finally, fragment
-  std::size_t query = url.find("#");
-  if(query == std::string::npos){
-    output.push_back(url);
-    output.push_back("");
-    return output;
-  } else {
-    output.push_back(url.substr(0,query));
-    output.push_back(url.substr(query+1));
-  }
-  
-  //Return
-  return output;
-}
-
-//Parameter extractor
-std::string parsing::extract_parameter(std::string url, std::string parameter){
-  
-  //Output object
-  std::string output = "";
-
-  //Find the parameter. If you can't, return an empty string
-  size_t param = url.find(parameter);
-  if(param == std::string::npos){
-    return output;
-  } else if(param + parameter.size() == url.size()) {
-    return output;
-  } else {
-    
-    //Substring, find the end of the parameter. If it can't be found, it's the end of the string,
-    //so just return the entire thing.
-    url = url.substr(param + parameter.size() + 1);
-    size_t param_end = url.find("&");
-    if(param_end == std::string::npos){
+    std::size_t fragment = url.find("#");
+    if(fragment == std::string::npos){
       output = url;
-    } else {
-      output = url.substr(0, param_end);
+      url = "";
+      return output;
     }
+    output = url.substr(0,fragment);
+    url = url.substr(fragment+1);
+    return output;
   }
 
+  output = url.substr(0,path);
+  url = url.substr(path+1);
   return output;
 }
 
-std::string parsing::replace_parameter(std::string url, std::string parameter, std::string new_value){
+std::string parsing::query(std::string& url){
+  if(url == ""){
+    return url;
+  }
   
-  //Output object
-  std::string output = "";
-  std::string holding;
-  
-  size_t param_loc = url.find(parameter);
-  if(param_loc == std::string::npos){
+  std::string output;
+  std::size_t fragment = url.find("#");
+  if(fragment == std::string::npos){
     output = url;
-  } else {
-    int loc = (param_loc+parameter.size()+1);
-    holding = url.substr(0,loc);
-    
-    if(loc >= url.size()){
-      output = holding + new_value;
+    url = "";
+    return output;
+  }
+  output = url.substr(0,fragment);
+  url = url.substr(fragment+1);
+  return output;
+}
+
+//URL parser
+std::vector < std::string > parsing::url_to_vector(std::string& url){
+  
+  //Output object, holding object, normalise.
+  std::vector < std::string > output(6);
+  std::vector < std::string > holding;
+  url = str_tolower(url);
+  
+  //Run
+  output[0] = scheme(url);
+  holding = domain_and_port(url);
+  output[1] = holding[0];
+  output[2] = holding[1];
+  output[3] = path(url);
+  output[4] = query(url);
+  output[5] = url;
+  return output;
+}
+
+//Parameter retrieval
+std::vector < std::string > parsing::get_parameter(std::vector < std::string >& urls, std::string component){
+  std::size_t component_location;
+  std::size_t next_location;
+  unsigned int input_size = urls.size();
+  int component_size = component.length();
+  std::vector < std::string > output(input_size);
+  
+  for(unsigned int i = 0; i < input_size; ++i){
+    component_location = urls[i].find(component);
+    if(component_location == std::string::npos){
+      output[i] = "";
     } else {
-      url = url.substr(loc+1);
-      size_t param_val_term_loc = url.find("&");
-      if(param_val_term_loc == std::string::npos || param_val_term_loc == url.size()){
-        output = holding + new_value;
+      next_location = urls[i].find_first_of("&#", component_location + component_size);
+      if(next_location == std::string::npos){
+        output[i] = urls[i].substr(component_location + component_size + 1);
       } else {
-        output = holding + new_value + url.substr(param_val_term_loc);
+        output[i] = urls[i].substr(component_location + component_size + 1, (next_location-(component_location + component_size + 1)));
       }
     }
-
   }
   return output;
 }
 
-std::string parsing::extract_host(std::string url){
+//Component retrieval
+std::string parsing::get_component(std::string& url, int component){
+  return url_to_vector(url)[component];
+}
+
+//Component modification
+std::string parsing::set_component(std::string url, int component, std::string new_value){
+  std::string url_cp = url;
+  std::string parsed_url_elem = url_to_vector(url)[component];
+  if(parsed_url_elem.size() != 0){
+    url_cp.replace(url_cp.find(parsed_url_elem), parsed_url_elem.size(), new_value);
+  }
+  return url_cp;
+}
+
+DataFrame parsing::parse_to_df(std::vector < std::string >& urls_ptr){
   
-  //Output object
-  std::string output = "";
-  std::string holding;
+  //Input and holding objects
+  unsigned int input_size = urls_ptr.size();
+  std::vector < std::string > holding(6);
   
-  size_t scheme_loc = url.find("//");
-  size_t path_loc;
+  //Output objects
+  std::vector < std::string > schemes(input_size);
+  std::vector < std::string > domains(input_size);
+  std::vector < std::string > ports(input_size);
+  std::vector < std::string > paths(input_size);
+  std::vector < std::string > parameters(input_size);
+  std::vector < std::string > fragments(input_size);
   
-  if(scheme_loc != std::string::npos){
-    output = url.substr(scheme_loc+2);
-    path_loc = output.find("/",scheme_loc+2);
-    if(path_loc != std::string::npos){
-      output = output.substr(0,path_loc);
+  for(unsigned int i = 0; i < input_size; i++){
+    if((i % 10000) == 0){
+      Rcpp::checkUserInterrupt();
     }
+    holding = url_to_vector(urls_ptr[i]);
+    schemes[i] = holding[0];
+    domains[i] = holding[1];
+    ports[i] = holding[2];
+    paths[i] = holding[3];
+    parameters[i] = holding[4];
+    fragments[i] = holding[5];
   }
   
-  return output;
+  return DataFrame::create(_["scheme"] = schemes,
+                           _["domain"] = domains,
+                           _["port"] = ports,
+                           _["path"] = paths,
+                           _["parameter"] = parameters,
+                           _["fragment"] = fragments,
+                           _["stringsAsFactors"] = false);
 }

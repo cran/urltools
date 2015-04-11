@@ -1,4 +1,27 @@
-Version 0.6 (WIP)
+Version 1.1.0 [WIP]
+-------------------------------------------------------------------------
+NEW FEATURES
+*url_parameters provides the values of specified parameters within a vector of URLs, as a data.frame
+*KeyboardInterrupts are now available for interrupting long computations.
+*url_parse now provides a data.frame, rather than a list, as output.
+
+BUG FIXES
+
+DEVELOPMENT
+*De-static the hell out of all the C++.
+*Internal refactor to store each logical stage of url decomposition as its own method
+*Internal refactor to use references, minimising memory usage; thanks to Mark Greenaway for making this work!
+*Roxygen upgrade
+
+Version 1.0.0
+-------------------------------------------------------------------------
+NEW FEATURES
+*New get/set functionality, mimicking lubridate; see the package vignette.
+
+DEVELOPMENT
+*Internal C++ documentation added and the encoders and parsers refactored.
+
+Version 0.6.0
 -------------------------------------------------------------------------
 NEW FEATURES
 *replace_parameter introduced, to augment extract_parameter (previously simply url_param). This

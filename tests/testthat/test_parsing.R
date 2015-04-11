@@ -2,38 +2,34 @@ context("URL parsing tests")
 
 test_that("Check parsing identifies each RfC element", {
   
-  data <- unlist(url_parse("https://www.google.com:80/foo.php?api_params=turnip#ending"))
-  expect_that(data[1], equals("https"))
-  expect_that(data[2], equals("www.google.com"))
-  expect_that(data[3], equals("80"))
-  expect_that(data[4], equals("foo.php"))
-  expect_that(data[5], equals("api_params=turnip"))
-  expect_that(data[6], equals("ending"))
+  data <- url_parse("https://www.google.com:80/foo.php?api_params=turnip#ending")
+  expect_that(ncol(data), equals(6))
+  expect_that(names(data), equals(c("scheme","domain","port","path","parameter","fragment")))
+  expect_that(data$scheme[1], equals("https"))
+  expect_that(data$domain[1], equals("www.google.com"))
+  expect_that(data$port[1], equals("80"))
+  expect_that(data$path[1], equals("foo.php"))
+  expect_that(data$parameter[1], equals("api_params=turnip"))
+  expect_that(data$fragment[1], equals("ending"))
 })
 
 test_that("Check parsing can handle missing elements", {
   
-  data <- unlist(url_parse("https://www.google.com/foo.php?api_params=turnip#ending"))
-  expect_that(data[1], equals("https"))
-  expect_that(data[2], equals("www.google.com"))
-  expect_that(data[3], equals(""))
-  expect_that(data[4], equals("foo.php"))
-  expect_that(data[5], equals("api_params=turnip"))
-  expect_that(data[6], equals("ending"))
+  data <- url_parse("https://www.google.com/foo.php?api_params=turnip#ending")
+  expect_that(ncol(data), equals(6))
+  expect_that(names(data), equals(c("scheme","domain","port","path","parameter","fragment")))
+  expect_that(data$scheme[1], equals("https"))
+  expect_that(data$domain[1], equals("www.google.com"))
+  expect_that(data$port[1], equals(""))
+  expect_that(data$path[1], equals("foo.php"))
+  expect_that(data$parameter[1], equals("api_params=turnip"))
+  expect_that(data$fragment[1], equals("ending"))
 })
 
-test_that("parameter value extraction works", {
-  
-  original_url <- "https://en.wikipedia.org/w/api.php?action=sitematrix&format=xml&smstate=all&smsiteprop=url|dbname|code|sitename&smlimit=2000"
-  expect_that(extract_parameter(original_url,"format"), equals("xml"))
-  expect_that(extract_parameter(original_url,"action"), equals("sitematrix"))
-  expect_that(extract_parameter(original_url,"2000"), equals(""))
-  
-})
-
-test_that("parameter value replacement works", {
-  
-  original_url <- "https://en.wikipedia.org/w/api.php?action=sitematrix&format=xml&smstate=all&smsiteprop=url|dbname|code|sitename&smlimit=2000"
-  expected_url <- "https://en.wikipedia.org/w/api.php?action=sitematrix&format=json&smstate=all&smsiteprop=url|dbname|code|sitename&smlimit=2000"
-  expect_that(replace_parameter(original_url,"format","json"), equals(expected_url))
+test_that("Parameter parsing can handle multiple, non-existent and pre-trailing parameters",{
+  urls <- c("https://www.google.com:80/foo.php?api_params=parsable&this_parameter=selfreferencing&hiphop=awesome",
+            "https://www.google.com:80/foo.php?api_params=parsable&this_parameter=selfreferencing&hiphop=awesome#foob",
+            "https://www.google.com:80/foo.php?this_parameter=selfreferencing&hiphop=awesome")
+  results <- url_parameters(urls, c("api_params","hiphop"))
+  expect_that(results[,1], equals(c("parsable","parsable","")))
 })

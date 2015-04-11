@@ -1,6 +1,7 @@
 #include <Rcpp.h>
 #include "encoding.h"
 #include "parsing.h"
+
 using namespace Rcpp;
 
 //'@title Encode or decode a URI
@@ -58,10 +59,13 @@ std::vector < std::string > url_decode(std::vector < std::string > urls){
   //Measure size, create output object
   int input_size = urls.size();
   std::vector < std::string > output(input_size);
-  
+  encoding enc_inst;
   //Decode each string in turn.
   for (int i = 0; i < input_size; ++i){
-    output[i] = encoding::internal_url_decode(urls[i]);
+    if((i % 10000) == 0){
+      Rcpp::checkUserInterrupt();
+    }
+    output[i] = enc_inst.internal_url_decode(urls[i]);
   }
   
   //Return
@@ -77,17 +81,23 @@ std::vector < std::string > url_encode(std::vector < std::string > urls){
   int input_size = urls.size();
   std::vector < std::string > output(input_size);
   size_t indices;
-  
+  encoding enc_inst;
+
   //For each string..
   for (int i = 0; i < input_size; ++i){
+    
+    //Check for user interrupts.
+    if((i % 10000) == 0){
+      Rcpp::checkUserInterrupt();
+    }
     
     //Extract the protocol. If you can't find it, just encode the entire thing.
     indices = urls[i].find("://");
     if(indices == std::string::npos){
-      output[i] = encoding::internal_url_encode(urls[i]);
+      output[i] = enc_inst.internal_url_encode(urls[i]);
     } else {
       //Otherwise, split out the protocol and encode !protocol.
-      output[i] = urls[i].substr(0,indices+3) + encoding::internal_url_encode(urls[i].substr(indices+3));
+      output[i] = urls[i].substr(0,indices+3) + enc_inst.internal_url_encode(urls[i].substr(indices+3));
     }
   }
   
@@ -95,14 +105,53 @@ std::vector < std::string > url_encode(std::vector < std::string > urls){
   return output;
 }
 
+//'@title get the values of a URL's parameters
+//'@description URLs can have parameters, taking the form of \code{name=value}, chained together
+//'with \code{&} symbols. \code{url_parameters}, when provided with a vector of URLs and a vector
+//'of parameter names, will generate a data.frame consisting of the values of each parameter
+//'for each URL.
+//'
+//'@param urls a vector of URLs
+//'
+//'@param parameter_names a vector of parameter names
+//'
+//'@return a data.frame containing one column for each provided parameter name. Values that
+//'cannot be found within a particular URL are represented by an empty string.
+//'
+//'@examples
+//'#A very simple example
+//'url <- "https://google.com:80/foo.php?this_parameter=selfreferencing&hiphop=awesome"
+//'parameter_values <- url_parameters(url, c("this_parameter","hiphop"))
+//'
+//'@seealso \code{\link{url_parse}} for decomposing URLs into their constituent parts.
+//'
+//'@export
+//[[Rcpp::export]]
+List url_parameters(std::vector < std::string > urls, std::vector < std::string > parameter_names){
+  parsing p_inst;
+  List output;
+  IntegerVector rownames = Rcpp::seq(1,urls.size());
+  unsigned int column_count = parameter_names.size();
+  std::vector < std::string >&url_ref = urls;
+  
+  for(unsigned int i = 0; i < column_count; ++i){
+    if((i % 10000) == 0){
+      Rcpp::checkUserInterrupt();
+    }
+    output.push_back(p_inst.get_parameter(url_ref, parameter_names[i]));
+  }
+  output.attr("class") = "data.frame";
+  output.attr("names") = parameter_names;
+  output.attr("row.names") = rownames;
+  return output;
+}
+
+
 //'@title split URLs into their component parts
 //'@description \code{url_parse} takes a vector of URLs and splits each one into its component
 //'parts, as recognised by RfC 3986.
 //'
 //'@param urls a vector of URLs
-//'
-//'@param normalise whether to normalise the URLs - essentially, whether or not to
-//'make them consistently lower-case. Set to TRUE by default.
 //'
 //'@details It's useful to be able to take a URL and split it out into its component parts - 
 //'for the purpose of hostname extraction, for example, or analysing API calls. This functionality
@@ -119,132 +168,13 @@ std::vector < std::string > url_encode(std::vector < std::string > urls){
 //'@examples
 //'url_parse("https://en.wikipedia.org/wiki/Article")
 //'
-//'@export
-// [[Rcpp::export]]
-std::list < std::vector < std::string > > url_parse(std::vector < std::string > urls, bool normalise = true){
-  
-  //Measure size, create output object
-  int input_size = urls.size();
-  std::list < std::vector < std::string > > output;
-  
-  //Decode each string in turn.
-  for (int i = 0; i < input_size; ++i){
-    output.push_back(parsing::parse_url(urls[i], normalise));
-  }
-  
-  //Return
-  return output;
-}
-
-//'@title extract the value of an API parameter
-//'@description \code{extract_parameter} takes a vector of URLs and extracts the value associated with
-//'a specified parameter
+//'@seealso \code{url_parameters} for extracting values associated with particular keys in a URL's
+//'query string.
 //'
-//'@details People tend to put useful data in URL parameters, particularly around
-//'APIs. Extracting these is a pain unless you have a very consistent API, since you're essentially
-//'doing partial string-matching with a potentially arbitrary number of characters to include.
-//'
-//'\code{extract_parameter} accepts a vector of URLs, and the name of the parameter (without an equals sign)
-//'and returns the value associated with that parameter. In the case that the parameter
-//'is represented multiple times within the URL, the first instance will be used.
-//'
-//'@param urls a vector of URLs.
-//'
-//'@param parameter the name of the parameter to search for. Case sensitive (so preprocessing
-//'with \code{\link{tolower}} may be useful).
-//'
-//'@return a character vector containing the value retrieved from each URL.
-//'
-//'@seealso \code{\link{replace_parameter}} for replacing, rather than extracting, values.
-//'@examples
-//'extract_parameter(urls = "http://google.org/w/api.php?format=xml&smstate=all", parameter = "format")
-//'
-//'@export
-// [[Rcpp::export]]
-std::vector < std::string > extract_parameter(std::vector < std::string > urls, std::string parameter){
-  
-  //Measure size, create output object
-  int input_size = urls.size();
-  std::vector < std::string > output(input_size);
-  
-  //Decode each string in turn.
-  for (int i = 0; i < input_size; ++i){
-    output[i] = parsing::extract_parameter(urls[i], parameter);
-  }
-  
-  //Return
-  return output;
-}
-
-
-//'@title replace the value of an API parameter
-//'@description \code{replace_parameter} takes a vector of URLs and replaces the value
-//'associated with a particular URL parameter, with one of your choosing.
-//'
-//'@details As well as component extraction, people can also find it useful to have access
-//'to component replacement - for example, mass-modifying a set of URLs used for API queries
-//'to output JSON rather than XML.
-//'
-//'\code{replace_parameter} accepts a vector of URLs, the name of a parameter, and a replacement value.
-//'It then loops through the URLs replacing the existing value held by that parameter with the new one.
-//'
-//'In the case that a parameter is present multiple times in a URL, only the first instance will be amended.
-//'In the case that a parameter is not present at all, no change to the URL will be made.
-//'
-//'@param urls a vector of URLs.
-//'
-//'@param parameter the name of the parameter to search for. Case sensitive (so preprocessing
-//'with \code{\link{tolower}} may be useful).
-//'
-//'@param new_value the value you want to replace the current value of \code{parameter}.
-//'
-//'@return a character vector containing the amended URLs. In the situation where the parameter is
-//'not present within the URL, the original URL will be returned.
-//'
-//'@seealso \code{\link{extract_parameter}} for extracting, rather than replacing, values.
-//'
-//'@examples
-//'replace_parameter(urls = "http://google.org/api.php?smstate=all",
-//'                  parameter = "smstate", new_value = "some")
-//'
-//'@export
-// [[Rcpp::export]]
-std::vector < std::string > replace_parameter(std::vector < std::string > urls, std::string parameter, std::string new_value){
-  
-  //Measure size, create output object
-  int input_size = urls.size();
-  std::vector < std::string > output(input_size);
-  
-  //Decode each string in turn.
-  for (int i = 0; i < input_size; ++i){
-    output[i] = parsing::replace_parameter(urls[i], parameter, new_value);
-  }
-  
-  //Return
-  return output;
-}
-
-//'@title extract a URL's hostname and provide it
-//'@description similar to \code{\link{url_parse}} or \code{\link{extract_parameter}}, but
-//'for hostnames only.
-//'
-//'@param urls a vector of URLs
-//'
-//'@return a vector of hostnames. In the event that a hostname cannot be identified, an
-//'empty string will be returned.
 //'@export
 //[[Rcpp::export]]
-std::vector < std::string > extract_host(std::vector < std::string > urls){
-  
-  //Measure size, create output object
-  int input_size = urls.size();
-  std::vector < std::string > output(input_size);
-  
-  //Decode each string in turn.
-  for (int i = 0; i < input_size; ++i){
-    output[i] = parsing::extract_host(urls[i]);
-  }
-  
-  //Return
-  return output;
+DataFrame url_parse(std::vector < std::string > urls){
+  std::vector < std::string >& urls_ptr = urls;
+  parsing p_inst;
+  return p_inst.parse_to_df(urls_ptr);
 }

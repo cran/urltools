@@ -212,10 +212,8 @@ to create connections to retrieve datasets. This is an essential feature for the
 but it also means that URL handlers are designed for situations where URLs <em>get</em> you to the data - 
 not situations where URLs <em>are</em> the data.</p>
 
-<p>As web analytics and research around human-computer interaction becomes more prominent, there is
-an increasing need for packages that can handle things like server-side logs. urltools is intended
-to provide the URL-centric component of this, containing functions for encoding, decoding, parsing
-and component extraction.</p>
+<p>There is no support for encoding or decoding URLs en-masse, and no support for parsing and
+interpreting them. <code>urltools</code> provides this support!</p>
 
 <h2>URL encoding and decoding</h2>
 
@@ -228,30 +226,31 @@ make them unsuitable for large datasets.</p>
 <code>URLdecode</code>, for example, breaks if the decoded value is out of range:</p>
 
 <pre><code class="r">URLdecode(&quot;test%gIL&quot;)
-#Error in rawToChar(out) : embedded nul in string: &#39;\0L&#39;
-#In addition: Warning message:
-#In URLdecode(&quot;%gIL&quot;) : out-of-range values treated as 0 in coercion to raw
+Error in rawToChar(out) : embedded nul in string: &#39;\0L&#39;
+In addition: Warning message:
+In URLdecode(&quot;%gIL&quot;) : out-of-range values treated as 0 in coercion to raw
 </code></pre>
 
 <p>URLencode, on the other hand, encodes slashes on its most strict setting - without
 paying attention to where those slashes <em>are</em>: if we attempt to URLencode an entire URL, we get:</p>
 
 <pre><code class="r">URLencode(&quot;https://en.wikipedia.org/wiki/Article&quot;, reserved = TRUE)
-#[1] &quot;https%3a%2f%2fen.wikipedia.org%2fwiki%2fArticle&quot;
+[1] &quot;https%3a%2f%2fen.wikipedia.org%2fwiki%2fArticle&quot;
 </code></pre>
 
-<p>That&#39;s a completely unusable URL.<sup>[or</sup> ewRL, if you will.]</p>
+<p>That&#39;s a completely unusable URL (or ewRL, if you will).</p>
 
 <p>urltools replaces both functions with <code>url_decode</code> and <code>url_encode</code> respectively:</p>
 
 <pre><code class="r">library(urltools)
 url_decode(&quot;test%gIL&quot;)
-#[1] &quot;test&quot;
+[1] &quot;test&quot;
 url_encode(&quot;https://en.wikipedia.org/wiki/Article&quot;)
-#[1] &quot;https://en.wikipedia.org%2fwiki%2fArticle&quot;
+[1] &quot;https://en.wikipedia.org%2fwiki%2fArticle&quot;
 </code></pre>
 
-<p>As you can see, <code>url_decode</code> simply excludes out-of-range characters from consideration, while <code>url_encode</code> detects characters that make up part of the URLs scheme, and leaves them unencoded.</p>
+<p>As you can see, <code>url_decode</code> simply excludes out-of-range characters from consideration, while <code>url_encode</code> detects characters that make up part of the URLs scheme, and leaves them unencoded. Both are extremely fast; with <code>urltools</code>, you can
+decode a vector of 1,000,000 URLs in 0.9 seconds.</p>
 
 <h2>URL parsing</h2>
 
@@ -260,20 +259,47 @@ you won&#39;t actually care about most of the URL. You&#39;ll want to look at th
 but not the entire thing as one string.</p>
 
 <p>The solution is <code>url_parse</code>, which takes a URL and breaks it out into its <a href="http://www.ietf.org/rfc/rfc3986.txt">RfC 3986</a> components: scheme, domain, port, path, query string and fragment identifier. This is,
-again, fully vectorised, and can happily be run over hundreds of thousands of URLs, rapidly processing them.</p>
+again, fully vectorised, and can happily be run over hundreds of thousands of URLs, rapidly processing them. The
+results are provided as a data.frame, since most people use data.frames to store data.</p>
 
-<pre><code class="r">url_parse(&quot;https://en.wikipedia.org/wiki/Article&quot;)
-#[[1]]
-#[1] &quot;https&quot;            &quot;en.wikipedia.org&quot; &quot;&quot;                 &quot;wiki/article&quot;     &quot;&quot;                 &quot;&quot;                
+<pre><code class="r">&gt; str(url_parse(&quot;https://en.wikipedia.org/wiki/Article&quot;))
+&#39;data.frame&#39;:   1 obs. of  6 variables:
+ $ scheme   : chr &quot;https&quot;
+ $ domain   : chr &quot;en.wikipedia.org&quot;
+ $ port     : chr &quot;&quot;
+ $ path     : chr &quot;wiki/article&quot;
+ $ parameter: chr &quot;&quot;
+ $ fragment : chr &quot;&quot;                           
 </code></pre>
 
-<p>One of the fields, as mentioned, is the query string - commonly used as a component of web form requests
-or API calls. Along with <code>url_parse</code>, we also have <code>url_extract_param</code>, which extracts the value
-a particular query parameter holds:</p>
+<h2>Value extraction</h2>
 
-<pre><code class="r">url_extract_param(urls = &quot;https://en.wikipedia.org/w/api.php?action=sitematrix&amp;format=xml&amp;smstate=all&quot;, parameter = &quot;smstate&quot;)
-#[1] &quot;all&quot;
+<p>Once a URL is parsed, it&#39;s sometimes useful to get the value associated with a particular query parameter. As
+an example, take the URL <code>http://en.wikipedia.org/wiki/api.php?action=parse&amp;pageid=1023&amp;export=json</code>. What
+pageID is being used? What is the export format? We can find out with <code>url_parameters</code>.</p>
+
+<pre><code class="r">&gt; str(url_parameters(urls = &quot;http://en.wikipedia.org/wiki/api.php?action=parse&amp;pageid=1023&amp;export=json&quot;,
+                     parameter_names = c(&quot;pageid&quot;,&quot;export&quot;)))
+&#39;data.frame&#39;:   1 obs. of  2 variables:
+ $ pageid: chr &quot;1023&quot;
+ $ export: chr &quot;json&quot;
 </code></pre>
+
+<h2>Getting/setting URL components</h2>
+
+<p>With the inclusion of a URL parser, we suddenly have the opportunity for lubridate-style component getting
+and setting. Syntax is identical to that of <code>lubridate</code>, but uses URL components as function names.</p>
+
+<pre><code class="r">url &lt;- &quot;https://en.wikipedia.org/wiki/Article&quot;
+scheme(url)
+&quot;https&quot;
+scheme(url) &lt;- &quot;ftp&quot;
+url
+&quot;ftp://en.wikipedia.org/wiki/Article&quot;
+</code></pre>
+
+<p>Fields that can be extracted or set are <code>scheme</code>, <code>domain</code>, <code>port</code>, <code>path</code>,
+<code>query</code> and <code>fragment</code>.</p>
 
 <h2>Other URL handlers</h2>
 
