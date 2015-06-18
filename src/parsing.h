@@ -7,18 +7,8 @@ using namespace Rcpp;
 class parsing{
   
   private:
-    /**
-     * A function for lower-casing a string; wraps tolower.
-     * Used when normalising URLs prior to parsing.
-     * 
-     * @param url a (possibly mixed-case) URL.
-     * 
-     * @see parse_url, which calls this.
-     * 
-     * @return a string containing the lower-cased version of x.
-     */
-    std::string str_tolower(std::string& url);
     
+    std::string string_tolower(std::string str);
     /**
      * A function for extracting the scheme of a URL; part of the
      * URL parsing framework.
@@ -88,6 +78,7 @@ class parsing{
      * part of the URL.
      */
     std::vector < std::string > url_to_vector(std::string& url_ptr);
+    
   public:
   
     /**

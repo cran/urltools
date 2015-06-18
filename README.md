@@ -1,9 +1,9 @@
 ##urltools
 A package for elegantly handling and parsing URLs from within R.
 
-__Author:__ Oliver Keyes<br/>
+__Author:__ Oliver Keyes, Jay Jacobs<br/>
 __License:__ [MIT](http://opensource.org/licenses/MIT)<br/>
-__Status:__ In development
+__Status:__ Stable
 
 ![downloads](http://cranlogs.r-pkg.org/badges/grand-total/urltools)
 
@@ -21,19 +21,23 @@ cases, the functions are designed to be content-safe (not breaking on unexpected
 and fully vectorised, resulting in a dramatic speed improvement over existing implementations -
 crucial for large datasets. For more information, see the [urltools vignette](https://github.com/Ironholds/urltools/blob/master/vignettes/urltools.Rmd).
 
+Please note that this project is released with a [Contributor Code of Conduct](CONDUCT.md).
+By participating in this project you agree to abide by its terms.
+
 ###Installation
 
-The latest released version can be obtained via:
+The latest CRAN version can be obtained via:
 
-    library(devtools)
-    install_github("ironholds/urltools", ref = "1.0.0")
+    install.packages("urltools")
 
+The latest maintenance version:
+
+    devtools::install_github("ironholds/urltools", ref = "1.2.0")
+    
 To get the development version:
 
-    library(devtools)
-    install_github("ironholds/urltools")
+    devtools::install_github("ironholds/urltools")
 
 ###Dependencies
 * R. Doy.
 * [Rcpp](http://cran.rstudio.com/web/packages/Rcpp/)
-

@@ -206,7 +206,7 @@ hr {
 %\VignetteIndexEntry{urltools}
 -->
 
-<p>#Elegant URL handling with urltools
+<p>##Elegant URL handling with urltools
 URLs are treated, by base R, as nothing more than components of a data retrieval process: they exist
 to create connections to retrieve datasets. This is an essential feature for the language to have,
 but it also means that URL handlers are designed for situations where URLs <em>get</em> you to the data - 
@@ -215,7 +215,7 @@ not situations where URLs <em>are</em> the data.</p>
 <p>There is no support for encoding or decoding URLs en-masse, and no support for parsing and
 interpreting them. <code>urltools</code> provides this support!</p>
 
-<h2>URL encoding and decoding</h2>
+<h3>URL encoding and decoding</h3>
 
 <p>Base R provides two functions - <code>URLdecode</code> and <code>URLencode</code> - for taking percentage-encoded
 URLs and turning them into regular strings, or vice versa. As discussed, these are primarily designed to
@@ -252,7 +252,7 @@ url_encode(&quot;https://en.wikipedia.org/wiki/Article&quot;)
 <p>As you can see, <code>url_decode</code> simply excludes out-of-range characters from consideration, while <code>url_encode</code> detects characters that make up part of the URLs scheme, and leaves them unencoded. Both are extremely fast; with <code>urltools</code>, you can
 decode a vector of 1,000,000 URLs in 0.9 seconds.</p>
 
-<h2>URL parsing</h2>
+<h3>URL parsing</h3>
 
 <p>Once you&#39;ve got your nicely decoded (or encoded) URLs, it&#39;s time to do something with them - and, most of the time,
 you won&#39;t actually care about most of the URL. You&#39;ll want to look at the scheme, or the domain, or the path,
@@ -262,7 +262,8 @@ but not the entire thing as one string.</p>
 again, fully vectorised, and can happily be run over hundreds of thousands of URLs, rapidly processing them. The
 results are provided as a data.frame, since most people use data.frames to store data.</p>
 
-<pre><code class="r">&gt; str(url_parse(&quot;https://en.wikipedia.org/wiki/Article&quot;))
+<pre><code class="r">&gt; parsed_address &lt;- url_parse(&quot;https://en.wikipedia.org/wiki/Article&quot;)
+&gt; str(parsed_address)
 &#39;data.frame&#39;:   1 obs. of  6 variables:
  $ scheme   : chr &quot;https&quot;
  $ domain   : chr &quot;en.wikipedia.org&quot;
@@ -272,7 +273,13 @@ results are provided as a data.frame, since most people use data.frames to store
  $ fragment : chr &quot;&quot;                           
 </code></pre>
 
-<h2>Value extraction</h2>
+<p>We can also perform the opposite of this operation with <code>url_compose</code>:</p>
+
+<pre><code class="r">&gt; url_compose(parsed_address)
+[1] &quot;https://en.wikipedia.org/wiki/article&quot;
+</code></pre>
+
+<h3>Value extraction</h3>
 
 <p>Once a URL is parsed, it&#39;s sometimes useful to get the value associated with a particular query parameter. As
 an example, take the URL <code>http://en.wikipedia.org/wiki/api.php?action=parse&amp;pageid=1023&amp;export=json</code>. What
@@ -285,7 +292,7 @@ pageID is being used? What is the export format? We can find out with <code>url_
  $ export: chr &quot;json&quot;
 </code></pre>
 
-<h2>Getting/setting URL components</h2>
+<h3>Getting/setting URL components</h3>
 
 <p>With the inclusion of a URL parser, we suddenly have the opportunity for lubridate-style component getting
 and setting. Syntax is identical to that of <code>lubridate</code>, but uses URL components as function names.</p>
@@ -299,9 +306,26 @@ url
 </code></pre>
 
 <p>Fields that can be extracted or set are <code>scheme</code>, <code>domain</code>, <code>port</code>, <code>path</code>,
-<code>query</code> and <code>fragment</code>.</p>
+<code>parameters</code> and <code>fragment</code>.</p>
 
-<h2>Other URL handlers</h2>
+<h3>Suffix extraction</h3>
+
+<p>Once we&#39;ve extracted a domain from a URL with <code>domain</code> or <code>url_parse</code>, we can identify which bit is the domain name, and which
+bit is the &ldquo;top-level domain&rdquo; or suffix, thanks to code contributed by Jay Jacobs:</p>
+
+<pre><code class="r">&gt; url &lt;- &quot;https://en.wikipedia.org/wiki/Article&quot;
+&gt; domain_name &lt;- domain(url)
+&gt; domain_name
+[1] &quot;en.wikipedia.org&quot;
+&gt; str(suffix_extract(domain_name))
+&#39;data.frame&#39;:   1 obs. of  4 variables:
+ $ host     : chr &quot;en.wikipedia.org&quot;
+ $ subdomain: chr &quot;en&quot;
+ $ domain   : chr &quot;wikipedia&quot;
+ $ tld      : chr &quot;org&quot;
+</code></pre>
+
+<h3>Other URL handlers</h3>
 
 <p>If you have ideas for other URL handlers that would make your data processing easier, the best approach
 is to either <a href="https://github.com/Ironholds/urltools/issues">request it</a> or <a href="https://github.com/Ironholds/urltools/pulls">add it</a>!</p>

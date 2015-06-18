@@ -16,7 +16,8 @@
 #  [1] "https://en.wikipedia.org%2fwiki%2fArticle"
 
 ## ---- eval=FALSE---------------------------------------------------------
-#  > str(url_parse("https://en.wikipedia.org/wiki/Article"))
+#  > parsed_address <- url_parse("https://en.wikipedia.org/wiki/Article")
+#  > str(parsed_address)
 #  'data.frame':	1 obs. of  6 variables:
 #   $ scheme   : chr "https"
 #   $ domain   : chr "en.wikipedia.org"
@@ -24,6 +25,10 @@
 #   $ path     : chr "wiki/article"
 #   $ parameter: chr ""
 #   $ fragment : chr ""
+
+## ---- eval=FALSE---------------------------------------------------------
+#  > url_compose(parsed_address)
+#  [1] "https://en.wikipedia.org/wiki/article"
 
 ## ---- eval=FALSE---------------------------------------------------------
 #  > str(url_parameters(urls = "http://en.wikipedia.org/wiki/api.php?action=parse&pageid=1023&export=json",
@@ -39,4 +44,16 @@
 #  scheme(url) <- "ftp"
 #  url
 #  "ftp://en.wikipedia.org/wiki/Article"
+
+## ---- eval=FALSE---------------------------------------------------------
+#  > url <- "https://en.wikipedia.org/wiki/Article"
+#  > domain_name <- domain(url)
+#  > domain_name
+#  [1] "en.wikipedia.org"
+#  > str(suffix_extract(domain_name))
+#  'data.frame':	1 obs. of  4 variables:
+#   $ host     : chr "en.wikipedia.org"
+#   $ subdomain: chr "en"
+#   $ domain   : chr "wikipedia"
+#   $ tld      : chr "org"
 

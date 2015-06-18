@@ -106,19 +106,42 @@ url_parameters <- function(urls, parameter_names) {
 #'perfectly suitable for the intended purpose (decomposition in the context of automated
 #'HTTP requests from R), but not for large-scale analysis.
 #'
-#'@return a list of vectors, one for each URL, with each vector containing (in sequence)
-#'the URL's scheme, domain, port, path, query string and fragment identifier. See the
-#'\href{http://tools.ietf.org/html/rfc3986}{relevant IETF RfC} for definitions. If an element
-#'cannot be identified, it is replaced with an empty string.
+#'@return a data.frame consisting of the columns scheme, domain, port, path, query
+#'and fragment. See the '\href{http://tools.ietf.org/html/rfc3986}{relevant IETF RfC} for
+#'definitions. If an element cannot be identified, it is represented by an empty string.
 #'
 #'@examples
 #'url_parse("https://en.wikipedia.org/wiki/Article")
 #'
-#'@seealso \code{url_parameters} for extracting values associated with particular keys in a URL's
-#'query string.
+#'@seealso \code{\link{url_parameters}} for extracting values associated with particular keys in a URL's
+#'query string, and \code{\link{url_compose}}, which is \code{url_parse} in reverse.
 #'
 #'@export
 url_parse <- function(urls) {
     .Call('urltools_url_parse', PACKAGE = 'urltools', urls)
+}
+
+#'@title Recompose Parsed URLs
+#'
+#'@description Sometimes you want to take a vector of URLs, parse them, perform
+#'some operations and then rebuild them. \code{url_compose} takes a data.frame produced
+#'by \code{\link{url_parse}} and rebuilds it into a vector of full URLs (or: URLs as full
+#'as the vector initially thrown into url_parse).
+#'
+#'This is currently a `beta` feature; please do report bugs if you find them.
+#'
+#'@param parsed_urls a data.frame sourced from \code{\link{url_parse}}
+#'
+#'@seealso \code{\link{scheme}} and other accessors, which you may want to
+#'run URLs through before composing them to modify individual values.
+#'
+#'@examples
+#'#Parse a URL and compose it
+#'url <- "http://en.wikipedia.org"
+#'url_compose(url_parse(url))
+#'
+#'@export
+url_compose <- function(parsed_urls) {
+    .Call('urltools_url_compose', PACKAGE = 'urltools', parsed_urls)
 }
 
