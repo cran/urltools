@@ -279,19 +279,6 @@ results are provided as a data.frame, since most people use data.frames to store
 [1] &quot;https://en.wikipedia.org/wiki/article&quot;
 </code></pre>
 
-<h3>Value extraction</h3>
-
-<p>Once a URL is parsed, it&#39;s sometimes useful to get the value associated with a particular query parameter. As
-an example, take the URL <code>http://en.wikipedia.org/wiki/api.php?action=parse&amp;pageid=1023&amp;export=json</code>. What
-pageID is being used? What is the export format? We can find out with <code>url_parameters</code>.</p>
-
-<pre><code class="r">&gt; str(url_parameters(urls = &quot;http://en.wikipedia.org/wiki/api.php?action=parse&amp;pageid=1023&amp;export=json&quot;,
-                     parameter_names = c(&quot;pageid&quot;,&quot;export&quot;)))
-&#39;data.frame&#39;:   1 obs. of  2 variables:
- $ pageid: chr &quot;1023&quot;
- $ export: chr &quot;json&quot;
-</code></pre>
-
 <h3>Getting/setting URL components</h3>
 
 <p>With the inclusion of a URL parser, we suddenly have the opportunity for lubridate-style component getting
@@ -323,6 +310,47 @@ bit is the &ldquo;top-level domain&rdquo; or suffix, thanks to code contributed 
  $ subdomain: chr &quot;en&quot;
  $ domain   : chr &quot;wikipedia&quot;
  $ tld      : chr &quot;org&quot;
+</code></pre>
+
+<h3>Query manipulation</h3>
+
+<p>Once a URL is parsed, it&#39;s sometimes useful to get the value associated with a particular query parameter. As
+an example, take the URL <code>http://en.wikipedia.org/wiki/api.php?action=parse&amp;pageid=1023&amp;export=json</code>. What
+pageID is being used? What is the export format? We can find out with <code>param_get</code>.</p>
+
+<pre><code class="r">&gt; str(param_get(urls = &quot;http://en.wikipedia.org/wiki/api.php?action=parse&amp;pageid=1023&amp;export=json&quot;,
+                     parameter_names = c(&quot;pageid&quot;,&quot;export&quot;)))
+&#39;data.frame&#39;:   1 obs. of  2 variables:
+ $ pageid: chr &quot;1023&quot;
+ $ export: chr &quot;json&quot;
+</code></pre>
+
+<p>This isn&#39;t the only function for query manipulation; we can also dynamically modify the values a particular parameter
+might have, or strip them out entirely.</p>
+
+<p>To modify the values, we use <code>param_set</code>:</p>
+
+<pre><code class="r">url &lt;- &quot;http://en.wikipedia.org/wiki/api.php?action=parse&amp;pageid=1023&amp;export=json&quot;
+url &lt;- param_set(url, key = &quot;pageid&quot;, value = &quot;12&quot;)
+url
+# [1] &quot;http://en.wikipedia.org/wiki/api.php?action=parse&amp;pageid=12&amp;export=json&quot;
+</code></pre>
+
+<p>As you can see this works pretty well; it even works in situations where the URL doesn&#39;t <em>have</em> a query yet:</p>
+
+<pre><code class="r">url &lt;- &quot;http://en.wikipedia.org/wiki/api.php&quot;
+url &lt;- param_set(url, key = &quot;pageid&quot;, value = &quot;12&quot;)
+url
+# [1] &quot;http://en.wikipedia.org/wiki/api.php?pageid=12&quot;
+</code></pre>
+
+<p>On the other hand we might have a parameter we just don&#39;t want any more - that can be handled with <code>param_remove</code>, which can
+take multiple parameters as well as multiple URLs:</p>
+
+<pre><code class="r">url &lt;- &quot;http://en.wikipedia.org/wiki/api.php?action=parse&amp;pageid=1023&amp;export=json&quot;
+url &lt;- param_remove(url, keys = c(&quot;action&quot;,&quot;export&quot;))
+url
+# [1] &quot;http://en.wikipedia.org/wiki/api.php?pageid=1023&quot;
 </code></pre>
 
 <h3>Other URL handlers</h3>

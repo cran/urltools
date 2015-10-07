@@ -31,13 +31,6 @@
 #  [1] "https://en.wikipedia.org/wiki/article"
 
 ## ---- eval=FALSE---------------------------------------------------------
-#  > str(url_parameters(urls = "http://en.wikipedia.org/wiki/api.php?action=parse&pageid=1023&export=json",
-#                       parameter_names = c("pageid","export")))
-#  'data.frame':	1 obs. of  2 variables:
-#   $ pageid: chr "1023"
-#   $ export: chr "json"
-
-## ---- eval=FALSE---------------------------------------------------------
 #  url <- "https://en.wikipedia.org/wiki/Article"
 #  scheme(url)
 #  "https"
@@ -56,4 +49,29 @@
 #   $ subdomain: chr "en"
 #   $ domain   : chr "wikipedia"
 #   $ tld      : chr "org"
+
+## ---- eval=FALSE---------------------------------------------------------
+#  > str(param_get(urls = "http://en.wikipedia.org/wiki/api.php?action=parse&pageid=1023&export=json",
+#                       parameter_names = c("pageid","export")))
+#  'data.frame':	1 obs. of  2 variables:
+#   $ pageid: chr "1023"
+#   $ export: chr "json"
+
+## ---- eval=FALSE---------------------------------------------------------
+#  url <- "http://en.wikipedia.org/wiki/api.php?action=parse&pageid=1023&export=json"
+#  url <- param_set(url, key = "pageid", value = "12")
+#  url
+#  # [1] "http://en.wikipedia.org/wiki/api.php?action=parse&pageid=12&export=json"
+
+## ---- eval=FALSE---------------------------------------------------------
+#  url <- "http://en.wikipedia.org/wiki/api.php"
+#  url <- param_set(url, key = "pageid", value = "12")
+#  url
+#  # [1] "http://en.wikipedia.org/wiki/api.php?pageid=12"
+
+## ---- eval=FALSE---------------------------------------------------------
+#  url <- "http://en.wikipedia.org/wiki/api.php?action=parse&pageid=1023&export=json"
+#  url <- param_remove(url, keys = c("action","export"))
+#  url
+#  # [1] "http://en.wikipedia.org/wiki/api.php?pageid=1023"
 
