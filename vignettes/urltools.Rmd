@@ -66,10 +66,10 @@ results are provided as a data.frame, since most people use data.frames to store
 'data.frame':	1 obs. of  6 variables:
  $ scheme   : chr "https"
  $ domain   : chr "en.wikipedia.org"
- $ port     : chr ""
- $ path     : chr "wiki/article"
- $ parameter: chr ""
- $ fragment : chr ""                           
+ $ port     : chr NA
+ $ path     : chr "wiki/Article"
+ $ parameter: chr NA
+ $ fragment : chr NA                         
 ```
 
 We can also perform the opposite of this operation with `url_compose`:
@@ -154,6 +154,7 @@ url <- param_remove(url, keys = c("action","export"))
 url
 # [1] "http://en.wikipedia.org/wiki/api.php?pageid=1023"
 ```
+
 ### Other URL handlers
 If you have ideas for other URL handlers that would make your data processing easier, the best approach
 is to either [request it](https://github.com/Ironholds/urltools/issues) or [add it](https://github.com/Ironholds/urltools/pulls)!

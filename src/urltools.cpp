@@ -42,6 +42,9 @@ using namespace Rcpp;
 //'
 //'@return a character vector containing the encoded (or decoded) versions of "urls".
 //'
+//'@seealso Bob Rudis's \href{https://github.com/hrbrmstr/punycode}{Punycode} package on GitHub, for handling
+//'punycode in URLs.
+//'
 //'@examples
 //'
 //'url_decode("https://en.wikipedia.org/wiki/File:Vice_City_Public_Radio_%28logo%29.jpg")
@@ -55,18 +58,22 @@ using namespace Rcpp;
 //'@rdname encoder
 //'@export
 // [[Rcpp::export]]
-std::vector < std::string > url_decode(std::vector < std::string > urls){
+CharacterVector url_decode(CharacterVector urls){
   
   //Measure size, create output object
   int input_size = urls.size();
-  std::vector < std::string > output(input_size);
+  CharacterVector output(input_size);
   encoding enc_inst;
   //Decode each string in turn.
   for (int i = 0; i < input_size; ++i){
     if((i % 10000) == 0){
       Rcpp::checkUserInterrupt();
     }
-    output[i] = enc_inst.internal_url_decode(urls[i]);
+    if(urls[i] == NA_STRING){
+      output[i] = NA_STRING;
+    } else {
+      output[i] = enc_inst.internal_url_decode(Rcpp::as<std::string>(urls[i]));
+    }
   }
   
   //Return
@@ -76,11 +83,12 @@ std::vector < std::string > url_decode(std::vector < std::string > urls){
 //'@rdname encoder
 //'@export
 // [[Rcpp::export]]
-std::vector < std::string > url_encode(std::vector < std::string > urls){
+CharacterVector url_encode(CharacterVector urls){
   
   //Measure size, create output object and holding objects
   int input_size = urls.size();
-  std::vector < std::string > output(input_size);
+  CharacterVector output(input_size);
+  std::string holding;
   size_t scheme_start;
   size_t first_slash;
   encoding enc_inst;
@@ -93,17 +101,23 @@ std::vector < std::string > url_encode(std::vector < std::string > urls){
       Rcpp::checkUserInterrupt();
     }
     
-    //Extract the protocol. If you can't find it, just encode the entire thing.
-    scheme_start = urls[i].find("://");
-    if(scheme_start == std::string::npos){
-      output[i] = enc_inst.internal_url_encode(urls[i]);
+    if(urls[i] == NA_STRING){
+      output[i] = NA_STRING;
     } else {
-      //Otherwise, split out the protocol and encode !protocol.
-      first_slash = urls[i].find("/", scheme_start+3);
-      if(first_slash == std::string::npos){
-        output[i] = urls[i].substr(0,scheme_start+3) + enc_inst.internal_url_encode(urls[i].substr(scheme_start+3));
+      holding = Rcpp::as<std::string>(urls[i]);
+
+      //Extract the protocol. If you can't find it, just encode the entire thing.
+      scheme_start = holding.find("://");
+      if(scheme_start == std::string::npos){
+        output[i] = enc_inst.internal_url_encode(holding);
       } else {
-        output[i] = urls[i].substr(0,first_slash+1) + enc_inst.internal_url_encode(urls[i].substr(first_slash+1));
+        //Otherwise, split out the protocol and encode !protocol.
+        first_slash = holding.find("/", scheme_start+3);
+        if(first_slash == std::string::npos){
+          output[i] = holding.substr(0,scheme_start+3) + enc_inst.internal_url_encode(holding.substr(scheme_start+3));
+        } else {
+          output[i] = holding.substr(0,first_slash+1) + enc_inst.internal_url_encode(holding.substr(first_slash+1));
+        }
       }
     }
   }
@@ -111,8 +125,6 @@ std::vector < std::string > url_encode(std::vector < std::string > urls){
   //Return
   return output;
 }
-
-
 
 //'@title split URLs into their component parts
 //'@description \code{url_parse} takes a vector of URLs and splits each one into its component
@@ -139,8 +151,8 @@ std::vector < std::string > url_encode(std::vector < std::string > urls){
 //'
 //'@export
 //[[Rcpp::export]]
-DataFrame url_parse(std::vector < std::string > urls){
-  std::vector < std::string >& urls_ptr = urls;
+DataFrame url_parse(CharacterVector urls){
+  CharacterVector& urls_ptr = urls;
   parsing p_inst;
   return p_inst.parse_to_df(urls_ptr);
 }
@@ -166,7 +178,7 @@ DataFrame url_parse(std::vector < std::string > urls){
 //'
 //'@export
 //[[Rcpp::export]]
-std::vector < std::string > url_compose(DataFrame parsed_urls){
+CharacterVector url_compose(DataFrame parsed_urls){
   compose c_inst;
   return c_inst.compose_multiple(parsed_urls);
 }

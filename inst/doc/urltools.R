@@ -21,10 +21,10 @@
 #  'data.frame':	1 obs. of  6 variables:
 #   $ scheme   : chr "https"
 #   $ domain   : chr "en.wikipedia.org"
-#   $ port     : chr ""
-#   $ path     : chr "wiki/article"
-#   $ parameter: chr ""
-#   $ fragment : chr ""
+#   $ port     : chr NA
+#   $ path     : chr "wiki/Article"
+#   $ parameter: chr NA
+#   $ fragment : chr NA
 
 ## ---- eval=FALSE---------------------------------------------------------
 #  > url_compose(parsed_address)
