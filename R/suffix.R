@@ -2,18 +2,93 @@
 #' @description This dataset contains a registry of public suffixes, as retrieved from
 #' and defined by the \href{https://publicsuffix.org/}{public suffix list}. It is
 #' sorted by how many periods(".") appear in the suffix, to optimise it for
-#' \code{\link{suffix_extract}}.
+#' \code{\link{suffix_extract}}.  It is a data.frame with two columns, the first is
+#' the list of suffixes and the second is our best guess at the comment or owner 
+#' associated with the particular suffix. 
 #'
 #' @docType data
 #' @keywords datasets
 #' @name suffix_dataset
 #'
-#' @seealso \code{\link{suffix_extract}} for extracting suffixes from domain names.
+#' @seealso \code{\link{suffix_extract}} for extracting suffixes from domain names,
+#' and \code{\link{suffix_refresh}} for getting a new, totally-up-to-date dataset
+#' version.
 #'
 #' @usage data(suffix_dataset)
-#' @note Last updated 2015-05-06.
-#' @format A vector of 7430 elements.
-NULL
+#' @note Last updated 2016-07-31.
+#' @format A data.frame of 8030 rows and 2 columns
+"suffix_dataset"
+
+#'@title Retrieve a public suffix dataset
+#'
+#'@description \code{urltools} comes with an inbuilt
+#'dataset of public suffixes, \code{\link{suffix_dataset}}.
+#'This is used in \code{\link{suffix_extract}} to identify the top-level domain
+#'within a particular domain name.
+#'
+#'While updates to the dataset will be included in each new package release,
+#'there's going to be a gap between changes to the suffixes list and changes to the package.
+#'Accordingly, the package also includes \code{suffix_refresh}, which generates
+#'and returns a \emph{fresh} version of the dataset. This can then be passed through
+#'to \code{\link{suffix_extract}}.
+#'
+#'@return a dataset equivalent in format to \code{\link{suffix_dataset}}.
+#'
+#'@seealso \code{\link{suffix_extract}} to extract suffixes from domain names,
+#'or \code{\link{suffix_dataset}} for the inbuilt, default version of the data.
+#'
+#'@examples
+#'\dontrun{
+#'new_suffixes <- suffix_refresh()
+#'}
+#'
+#'@export
+suffix_refresh <- function(){
+  
+  has_libcurl <- capabilities("libcurl")
+  if(length(has_libcurl) == 0 || has_libcurl == FALSE){
+    stop("libcurl support is needed for this function")
+  }
+  
+  #Read in and filter
+  connection <- url("https://www.publicsuffix.org/list/effective_tld_names.dat", method = "libcurl")
+  results <- readLines(connection)
+  close(connection)
+  
+  # making an assumption that sections are broken by blank lines
+  blank <- which(results == "")
+  # and gotta know where the comments are
+  comments <- grep(pattern = "^//", x=results)
+  
+  # if the file doesn't end on a blank line, stick an ending on there.
+  if (blank[length(blank)] < length(results)) {
+    blank <- c(blank, length(results)+1)
+  }
+  # now break up each section into a list
+  # grab right after the blank line and right before the next blank line.
+  suffix_dataset <- do.call(rbind, lapply(seq(length(blank) - 1), function(i) {
+    # these are the lines in the current block
+    lines <- seq(blank[i] + 1, blank[i + 1] - 1)
+    # assume there is nothing in the block
+    rez <- NULL
+    # the lines of text in this block
+    suff <- results[lines]
+    # of which these are the comments
+    iscomment <- lines %in% comments
+    # and check if we have any results 
+    # append the first comment at the top of the block only.
+    if(length(suff[!iscomment])) {
+      rez <- data.frame(suffixes = suff[!iscomment],
+                 comments = suff[which(iscomment)[1]], stringsAsFactors = FALSE)
+    }
+    rez
+  }))
+  ## this is the old way
+  #suffix_dataset <- results[!grepl(x = results, pattern = "//", fixed = TRUE) & !results == ""]
+
+  #Return the user-friendly version
+  return(suffix_dataset)
+}
 
 #' @title extract the suffix from domain names
 #' @description domain names have suffixes - common endings that people
@@ -30,6 +105,11 @@ NULL
 #' or \code{\link{url_parse}}. Alternately, full URLs can be provided
 #' and will then be run through \code{\link{domain}} internally.
 #'
+#' @param suffixes a dataset of suffixes. By default, this is NULL and the function
+#' relies on \code{\link{suffix_dataset}}. Optionally, if you want more updated
+#' suffix data, you can provide the result of \code{\link{suffix_refresh}} for
+#' this parameter.
+#' 
 #' @return a data.frame of four columns, "host" "subdomain", "domain" & "suffix".
 #' "host" is what was passed in. "subdomain" is the subdomain of the suffix.
 #' "domain" contains the part of the domain name that came before the matched suffix.
@@ -47,88 +127,133 @@ NULL
 #' domain_name <- domain("http://en.wikipedia.org")
 #' suffix_extract(domain_name)
 #'
-#' #Using internal parsing
-#' suffix_extract("http://en.wikipedia.org")
-#'
+#' #Relying on a fresh version of the suffix dataset
+#' suffix_extract(domain("http://en.wikipedia.org"), suffix_refresh())
+#' 
+#' @importFrom triebeard trie longest_match
 #' @export
-suffix_extract <- function(domains){
-  # grab the reference data set with the TLDs
-  suffix_dataset <- urltools::suffix_dataset
-  # set up a list of TLD's that have wild card values
-  wilds <- grepl('^\\*', suffix_dataset)
-  wildcard <- sub('\\*\\.', "", suffix_dataset[wilds])
-  # remove them from the TLDs
-  static <- suffix_dataset[!wilds]
-
-  # set up some blank variables, set length for speed
-  subdomain <- domain <- tld <- rep(NA_character_, length(domains))
-  # set up a list (one entry per domain) and
-  # split (on dots) the domains into vectors
-  splithosts <- strsplit(tolower(domains), "[.]")
-  # set the names on the list to sequential value
-  # we will use this later to get the index
-  names(splithosts) <- seq(length(splithosts))
-  # we need to set up how many iterations we have to do
-  # so grab the max length of splits we've done.
-  maxlen <- max(sapply(splithosts, length))
-
-  # now loop from 1 to one less of max length
-  # we do one less because we'll never have less
-  # then one field in the TLD (.com, .org, etc.)
-  for (split.after in seq(1, maxlen)) {
-    # apply through list,
-    templ <- vapply(splithosts, 
-                    function(x) paste0(x[(split.after):length(x)], collapse = "."), "character")
-    # test if any of of `split.after` match
-    matched <- templ %in% static
-    # if any of this length matched...
-    if (any(matched)) {
-      # pull the indexes of those that matched
-      # by pulling the names of the entry matched
-      index <- as.numeric(names(splithosts)[matched])
-      # if we aren't looking at the whole string past in
-      if (split.after > 1) { # then we have a domain
-        # save off the domain
-        domain[index] <- vapply(splithosts[matched],
-                                function(x) unlist(x[split.after - 1]), "character")
-        if (split.after > 2) { # then we have a subdomain
-          # and if we are at least 2 in, we have a subdomain
-          subdomain[index] <- vapply(splithosts[matched],
-                                     function(x) paste(x[1:(split.after - 2)], collapse = "."), "character")
-        }
+suffix_extract <- function(domains, suffixes = NULL){
+  if(!is.null(suffixes)){
+    # check if suffixes is a data.frame, and stop if column not found
+    if(is.data.frame(suffixes)) {
+      if ("suffixes" %in% colnames(suffixes)) {
+        suffixes <- suffixes$suffixes
+      } else {
+        stop("Expected column named \"suffixes\" in suffixes data.frame")
       }
-      # save the matched entities off into the tld vectors
-      tld[index] <- vapply(splithosts[matched],
-                          function(x) paste(x[(split.after):length(x)], collapse = "."), "character")
-
     }
-    # now the wildcard lookups, same concept as above
-    matched2 <- templ %in% wildcard
-    if (any(matched2) && split.after > 1) {
-
-      safter <- split.after - 1
-      index <- as.numeric(names(splithosts)[matched2])
-
-      if (safter > 1) {
-        domain[index] <- vapply(splithosts[matched2],
-                                function(x) x[safter - 1], "character")
-        if (safter > 2) {
-          subdomain[index] <- vapply(splithosts[matched2],
-                                     function(x) paste(x[1:(safter - 2)], collapse = "."), "character")
-        }
-      }
-      tld[index] <- vapply(splithosts[matched2],
-                           function(x) paste(x[(safter):length(x)], collapse = "."), "character")
-    }
-    # now this is where it gets fun
-    # if we matched anything,
-    # remove those from the splithosts data
-    if (any(matched2 | matched)) {
-      splithosts <- splithosts[!(matched | matched2)]
-      if (length(splithosts) < 1) break
-    }
-
+    suffix_load(suffixes)
   }
-  data.frame(host = domains, subdomain = subdomain, domain = domain, suffix = tld,
-             check.names = FALSE, stringsAsFactors = FALSE)
+  rev_domains <- reverse_strings(tolower(domains))
+  matched_suffixes <- triebeard::longest_match(urltools_env$suff_trie, rev_domains)
+  has_wildcard <- matched_suffixes %in% urltools_env$is_wildcard
+  return(finalise_suffixes(domains, matched_suffixes, has_wildcard))
+}
+
+#' @title Dataset of top-level domains (TLDs)
+#' @description This dataset contains a registry of top-level domains, as retrieved from
+#' and defined by the \href{http://data.iana.org/TLD/tlds-alpha-by-domain.txt}{IANA}.
+#' 
+#' @docType data
+#' @keywords datasets
+#' @name tld_dataset
+#'
+#' @seealso \code{\link{tld_extract}} for extracting TLDs from domain names,
+#' and \code{\link{tld_refresh}} to get an updated version of this dataset.
+#'
+#' @usage data(tld_dataset)
+#' @note Last updated 2016-07-20.
+#' @format A vector of 1275 elements.
+"tld_dataset"
+
+#'@title Retrieve a TLD dataset
+#'
+#'@description \code{urltools} comes with an inbuilt
+#'dataset of top level domains (TLDs), \code{\link{tld_dataset}}.
+#'This is used in \code{\link{tld_extract}} to identify the top-level domain
+#'within a particular domain name.
+#'
+#'While updates to the dataset will be included in each new package release,
+#'there's going to be a gap between changes to TLDs and changes to the package.
+#'Accordingly, the package also includes \code{tld_refresh}, which generates
+#'and returns a \emph{fresh} version of the dataset. This can then be passed through
+#'to \code{\link{tld_extract}}.
+#'
+#'@return a dataset equivalent in format to \code{\link{tld_dataset}}.
+#'
+#'@seealso \code{\link{tld_extract}} to extract suffixes from domain names,
+#'or \code{\link{tld_dataset}} for the inbuilt, default version of the data.
+#'
+#'@examples
+#'\dontrun{
+#'new_tlds <- tld_refresh()
+#'}
+#'
+#'@export
+tld_refresh <- function(){
+  raw_tlds <- readLines("http://data.iana.org/TLD/tlds-alpha-by-domain.txt", warn = FALSE)
+  raw_tlds <- tolower(raw_tlds[!grepl(x = raw_tlds, pattern = "(#|--)")])
+  return(raw_tlds)
+}
+
+#'@title Extract TLDs
+#'@description \code{tld_extract} extracts the top-level domain (TLD) from
+#'a vector of domain names. This is distinct from the suffixes, extracted with
+#'\code{\link{suffix_extract}}; TLDs are \emph{top} level, while suffixes are just
+#'domains through which internet users can publicly register domains (the difference
+#'between \code{.org.uk} and \code{.uk}).
+#'
+#'@param domains a vector of domains, retrieved through \code{\link{url_parse}} or
+#'\code{\link{domain}}.
+#'
+#'@param tlds a dataset of TLDs. If NULL (the default), \code{tld_extract} relies
+#'on urltools' \code{\link{tld_dataset}}; otherwise, you can pass in the result of
+#'\code{\link{tld_refresh}}.
+#'
+#'@return a data.frame of two columns: \code{domain}, with the original domain names,
+#'and \code{tld}, the identified TLD from the domain.
+#'
+#'@examples
+#'# Using the inbuilt dataset
+#'domains <- domain("https://en.wikipedia.org/wiki/Main_Page")
+#'tld_extract(domains)
+#'
+#'# Using a refreshed one
+#'tld_extract(domains, tld_refresh())
+#'
+#'@seealso \code{\link{suffix_extract}} for retrieving suffixes (distinct from TLDs).
+#'
+#'@export
+tld_extract <- function(domains, tlds = NULL){
+  if(is.null(tlds)){
+    tlds <- urltools::tld_dataset
+  }
+  guessed_tlds <- tld_extract_(tolower(domains))
+  guessed_tlds[!guessed_tlds %in% tlds] <- NA
+  return(data.frame(domain = domains, tld = guessed_tlds, stringsAsFactors = FALSE))
+}
+
+#'@title Extract hosts
+#'@description \code{host_extract} extracts the host from
+#'a vector of domain names. A host isn't the same as a domain - it could be
+#'the subdomain, if there are one or more subdomains. The host of \code{en.wikipedia.org}
+#'is \code{en}, while the host of \code{wikipedia.org} is \code{wikipedia}.
+#'
+#'@param domains a vector of domains, retrieved through \code{\link{url_parse}} or
+#'\code{\link{domain}}.
+#'
+#'@return a data.frame of two columns: \code{domain}, with the original domain names,
+#'and \code{host}, the identified host from the domain.
+#'
+#'@examples
+#'# With subdomains
+#'has_subdomain <- domain("https://en.wikipedia.org/wiki/Main_Page")
+#'host_extract(has_subdomain)
+#'
+#'# Without
+#'no_subdomain <- domain("https://ironholds.org/projects/r_shiny/")
+#'host_extract(no_subdomain)
+#'@export
+host_extract <- function(domains){
+  return(data.frame(domain = domains, host = host_extract_(domains), stringsAsFactors = FALSE))
 }

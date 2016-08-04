@@ -48,7 +48,16 @@
 #   $ host     : chr "en.wikipedia.org"
 #   $ subdomain: chr "en"
 #   $ domain   : chr "wikipedia"
-#   $ tld      : chr "org"
+#   $ suffix      : chr "org"
+
+## ---- eval=FALSE---------------------------------------------------------
+#  domain_name <- domain("https://en.wikipedia.org/wiki/Article")
+#  updated_suffixes <- suffix_refresh()
+#  suffix_extract(domain_name, updated_suffixes)
+
+## ---- eval=FALSE---------------------------------------------------------
+#  domain_name <- domain("https://en.wikipedia.org/wiki/Article")
+#  host_extract(domain_name)
 
 ## ---- eval=FALSE---------------------------------------------------------
 #  > str(param_get(urls = "http://en.wikipedia.org/wiki/api.php?action=parse&pageid=1023&export=json",

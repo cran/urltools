@@ -295,10 +295,10 @@ url
 <p>Fields that can be extracted or set are <code>scheme</code>, <code>domain</code>, <code>port</code>, <code>path</code>,
 <code>parameters</code> and <code>fragment</code>.</p>
 
-<h3>Suffix extraction</h3>
+<h3>Suffix and TLD extraction</h3>
 
 <p>Once we&#39;ve extracted a domain from a URL with <code>domain</code> or <code>url_parse</code>, we can identify which bit is the domain name, and which
-bit is the &ldquo;top-level domain&rdquo; or suffix, thanks to code contributed by Jay Jacobs:</p>
+bit is the suffix:</p>
 
 <pre><code class="r">&gt; url &lt;- &quot;https://en.wikipedia.org/wiki/Article&quot;
 &gt; domain_name &lt;- domain(url)
@@ -309,7 +309,25 @@ bit is the &ldquo;top-level domain&rdquo; or suffix, thanks to code contributed 
  $ host     : chr &quot;en.wikipedia.org&quot;
  $ subdomain: chr &quot;en&quot;
  $ domain   : chr &quot;wikipedia&quot;
- $ tld      : chr &quot;org&quot;
+ $ suffix      : chr &quot;org&quot;
+</code></pre>
+
+<p>This relies on an internal database of public suffixes, accessible at <code>suffix_dataset</code> - we recognise, though,
+that this dataset may get a bit out of date, so you can also pass the results of the <code>suffix_refresh</code> function,
+which retrieves an updated dataset, to <code>suffix_extract</code>:</p>
+
+<pre><code class="r">domain_name &lt;- domain(&quot;https://en.wikipedia.org/wiki/Article&quot;)
+updated_suffixes &lt;- suffix_refresh()
+suffix_extract(domain_name, updated_suffixes)
+</code></pre>
+
+<p>We can do the same thing with top-level domains, with precisely the same setup, except the functions and datasets are <code>tld_refresh</code>, <code>tld_extract</code> and <code>tld_dataset</code>.</p>
+
+<p>In the other direction we have <code>host_extract</code>, which retrieves, well, the host! If the URL has subdomains, it&#39;ll be the
+lowest-level subdomain. If it doesn&#39;t, it&#39;ll be the actual domain name, without the suffixes:</p>
+
+<pre><code class="r">domain_name &lt;- domain(&quot;https://en.wikipedia.org/wiki/Article&quot;)
+host_extract(domain_name)
 </code></pre>
 
 <h3>Query manipulation</h3>

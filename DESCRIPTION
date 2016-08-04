@@ -1,8 +1,8 @@
 Package: urltools
 Type: Package
 Title: Vectorised Tools for URL Handling and Parsing
-Version: 1.4.0
-Date: 2016-04-12
+Version: 1.5.0
+Date: 2016-08-03
 Author: Oliver Keyes [aut, cre], Jay Jacobs [aut, cre], Mark Greenaway [ctb],
     Bob Rudis [ctb]
 Maintainer: Oliver Keyes <ironholds@gmail.com>
@@ -15,13 +15,15 @@ Description: A toolkit for handling URLs that so far includes functions for URL
 License: MIT + file LICENSE
 LazyData: TRUE
 LinkingTo: Rcpp
-Imports: Rcpp, methods
+Imports: Rcpp, methods, triebeard
 Suggests: testthat, knitr
 URL: https://github.com/Ironholds/urltools/
 BugReports: https://github.com/Ironholds/urltools/issues
 VignetteBuilder: knitr
 RoxygenNote: 5.0.1
+Encoding: UTF-8
+Depends: R (>= 2.10)
 NeedsCompilation: yes
-Packaged: 2016-04-12 15:32:25 UTC; okeyes
+Packaged: 2016-08-04 02:49:44 UTC; ironholds
 Repository: CRAN
-Date/Publication: 2016-04-12 20:04:17
+Date/Publication: 2016-08-04 11:45:54

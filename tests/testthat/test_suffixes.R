@@ -26,7 +26,7 @@ test_that("Suffix extraction works with multiple domains",{
 })
 
 test_that("Suffix extraction works when the domain is the same as the suffix",{
-    result <- suffix_extract(c("googleapis.com", "myapi.googleapis.com"))
+  result <- suffix_extract(c("googleapis.com", "myapi.googleapis.com"))
   expect_that(ncol(result), equals(4))
   expect_that(names(result), equals(c("host","subdomain","domain","suffix")))
   expect_that(nrow(result), equals(2))
@@ -51,4 +51,26 @@ test_that("Suffix extraction works when the domain matches a wildcard suffix",{
   expect_equal(result$subdomain[2], NA_character_)
   expect_equal(result$domain[2], "banana")
   expect_equal(result$suffix[2], "boat.bd")
+})
+
+test_that("Suffix extraction works when the domain matches a wildcard suffix and has subdomains",{
+  result <- suffix_extract(c("foo.bar.banana.bd"))
+  expect_that(ncol(result), equals(4))
+  expect_that(names(result), equals(c("host","subdomain","domain","suffix")))
+  expect_that(nrow(result), equals(1))
+  expect_equal(result$subdomain[1], "foo")
+  expect_equal(result$domain[1], "bar")
+  expect_equal(result$suffix[1], "banana.bd")
+})
+
+
+test_that("Suffix extraction works with new suffixes",{
+  result <- suffix_extract("en.wikipedia.org", suffix_refresh())
+  expect_that(ncol(result), equals(4))
+  expect_that(names(result), equals(c("host","subdomain","domain","suffix")))
+  expect_that(nrow(result), equals(1))
+  
+  expect_that(result$subdomain[1], equals("en"))
+  expect_that(result$domain[1], equals("wikipedia"))
+  expect_that(result$suffix[1], equals("org"))
 })

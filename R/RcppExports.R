@@ -93,6 +93,22 @@ param_remove <- function(urls, keys) {
     .Call('urltools_param_remove', PACKAGE = 'urltools', urls, keys)
 }
 
+reverse_strings <- function(strings) {
+    .Call('urltools_reverse_strings', PACKAGE = 'urltools', strings)
+}
+
+finalise_suffixes <- function(full_domains, suffixes, wildcard) {
+    .Call('urltools_finalise_suffixes', PACKAGE = 'urltools', full_domains, suffixes, wildcard)
+}
+
+tld_extract_ <- function(domains) {
+    .Call('urltools_tld_extract_', PACKAGE = 'urltools', domains)
+}
+
+host_extract_ <- function(domains) {
+    .Call('urltools_host_extract_', PACKAGE = 'urltools', domains)
+}
+
 #'@title Encode or decode a URI
 #'@description encodes or decodes a URI/URL
 #'
