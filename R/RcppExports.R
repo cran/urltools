@@ -20,7 +20,7 @@ set_component_ <- function(urls, component, new_value) {
 #'@param parameter_names a vector of parameter names
 #'
 #'@return a data.frame containing one column for each provided parameter name. Values that
-#'cannot be found within a particular URL are represented by an empty string.
+#'cannot be found within a particular URL are represented by an NA.
 #'
 #'@examples
 #'#A very simple example
@@ -97,8 +97,8 @@ reverse_strings <- function(strings) {
     .Call('urltools_reverse_strings', PACKAGE = 'urltools', strings)
 }
 
-finalise_suffixes <- function(full_domains, suffixes, wildcard) {
-    .Call('urltools_finalise_suffixes', PACKAGE = 'urltools', full_domains, suffixes, wildcard)
+finalise_suffixes <- function(full_domains, suffixes, wildcard, is_suffix) {
+    .Call('urltools_finalise_suffixes', PACKAGE = 'urltools', full_domains, suffixes, wildcard, is_suffix)
 }
 
 tld_extract_ <- function(domains) {
