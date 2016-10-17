@@ -206,8 +206,9 @@ hr {
 %\VignetteIndexEntry{urltools}
 -->
 
-<p>##Elegant URL handling with urltools
-URLs are treated, by base R, as nothing more than components of a data retrieval process: they exist
+<p>##Elegant URL handling with urltools</p>
+
+<p>URLs are treated, by base R, as nothing more than components of a data retrieval process: they exist
 to create connections to retrieve datasets. This is an essential feature for the language to have,
 but it also means that URL handlers are designed for situations where URLs <em>get</em> you to the data - 
 not situations where URLs <em>are</em> the data.</p>
@@ -251,6 +252,8 @@ url_encode(&quot;https://en.wikipedia.org/wiki/Article&quot;)
 
 <p>As you can see, <code>url_decode</code> simply excludes out-of-range characters from consideration, while <code>url_encode</code> detects characters that make up part of the URLs scheme, and leaves them unencoded. Both are extremely fast; with <code>urltools</code>, you can
 decode a vector of 1,000,000 URLs in 0.9 seconds.</p>
+
+<p>Alongside these, we have functions for encoding and decoding the &#39;punycode&#39; format of URLs - ones that are designed to be internationalised and have unicode characters in them. These also take one argument, a vector of URLs, and can be found at <code>puny_encode</code> and <code>puny_decode</code> respectively.</p>
 
 <h3>URL parsing</h3>
 
