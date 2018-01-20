@@ -4,9 +4,7 @@
 #define __PARAM_INCLUDED__
 
 
-class parameter: public parsing {
-  
-private:
+namespace parameter {
   
   /**
    * Split out a URL query from the actual body. Used
@@ -14,10 +12,10 @@ private:
    * 
    * @param url a URL.
    * 
-   * @return a vector either of length 1, indicating that no
+   * @return a deque either of length 1, indicating that no
    * query was found, or 2, indicating that one was.
    */
-  std::vector < std::string > get_query_string(std::string url);
+  std::deque < std::string > get_query_string(std::string url);
   
   /**
    * Set the value of a single key=value parameter.
@@ -35,6 +33,7 @@ private:
    */
   std::string set_parameter(std::string url, std::string& component, std::string value);
   
+  String get_parameter_single(std::string url, std::string& component);
   /**
    * Reemove a range of key/value parameters
    * 
@@ -46,8 +45,8 @@ private:
    * 
    */
   std::string remove_parameter_single(std::string url, CharacterVector params);
-  
-public:
+
+  std::deque< std::string > get_parameter_names_single(std::string url);
   
   /**
    * Component retrieval specifically for parameters.
@@ -60,7 +59,15 @@ public:
    * @return a vector of the values for that component.
    */
   CharacterVector get_parameter(CharacterVector& urls, std::string component);
-  
+
+  /**
+   * Scan a list of URLS for parameter names used.
+   *
+   * @param A reference to a character vector of urls
+   *
+   * @return a vector of unique parameter names.
+   */
+  CharacterVector get_parameter_names(CharacterVector &urls);
   
   /**
    * Set the value of a single key=value parameter for a vector of strings.
@@ -88,6 +95,6 @@ public:
    */
   CharacterVector remove_parameter_vectorised(CharacterVector urls,
                                               CharacterVector params);
-};
+}
 
 #endif

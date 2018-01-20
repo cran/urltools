@@ -12,7 +12,8 @@ scheme(x) <- value
 \arguments{
 \item{x}{a URL, or vector of URLs}
 
-\item{value}{a replacement value for x's scheme.}
+\item{value}{a replacement value (or vector of replacement values)
+for x's scheme.}
 }
 \description{
 as in the lubridate package, individual components of a URL
@@ -34,4 +35,3 @@ scheme(example_url) <- NA_character_
 \code{\link{domain}}, \code{\link{port}}, \code{\link{path}},
 \code{\link{parameters}} and \code{\link{fragment}} for other accessors.
 }
-

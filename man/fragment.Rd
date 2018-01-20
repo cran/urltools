@@ -12,7 +12,8 @@ fragment(x) <- value
 \arguments{
 \item{x}{a URL, or vector of URLs}
 
-\item{value}{a replacement value for x's fragment.}
+\item{value}{a replacement value (or vector of replacement values)
+for x's fragment. If NULL, the fragment will be removed entirely.}
 }
 \description{
 as in the lubridate package, individual components of a URL
@@ -26,9 +27,11 @@ fragment(example_url)
 
 #Set a component
 fragment(example_url) <- "production"
+
+#Remove a component
+fragment(example_url) <- NULL
 }
 \seealso{
 \code{\link{scheme}}, \code{\link{domain}}, \code{\link{port}},
 \code{\link{path}} and \code{\link{parameters}} for other accessors.
 }
-

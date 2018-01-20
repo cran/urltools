@@ -1,8 +1,8 @@
 #include "parameter.h"
 
-std::vector < std::string > parameter::get_query_string(std::string url){
+std::deque < std::string > parameter::get_query_string(std::string url){
   
-  std::vector < std::string > output;
+  std::deque < std::string > output;
   size_t query_location = url.find("?");
   if(query_location == std::string::npos){
     output.push_back(url);
@@ -15,12 +15,21 @@ std::vector < std::string > parameter::get_query_string(std::string url){
 
 std::string parameter::set_parameter(std::string url, std::string& component, std::string value){
   
-  std::vector < std::string > holding = get_query_string(url);
+  std::deque < std::string > holding = get_query_string(url);
   if(holding.size() == 1){
     return holding[0] + ("?" + component + "=" + value);
   }
   
-  size_t component_location = holding[1].find((component + "="));
+  size_t component_location = std::string::npos, q_loc, amp_loc;
+  q_loc = holding[1].find(("?" + component + "="));
+  if(q_loc == std::string::npos){
+    amp_loc = holding[1].find(("&" + component + "="));
+    if(amp_loc != std::string::npos){
+      component_location = amp_loc + 1;
+    }
+  } else {
+    component_location = q_loc + 1;
+  }
   
   if(component_location == std::string::npos){
     holding[1] = (holding[1] + "&" + component + "=" + value);
@@ -40,7 +49,7 @@ std::string parameter::set_parameter(std::string url, std::string& component, st
 
 std::string parameter::remove_parameter_single(std::string url, CharacterVector params){
   
-  std::vector < std::string > parsed_url = get_query_string(url);
+  std::deque < std::string > parsed_url = get_query_string(url);
   if(parsed_url.size() == 1){
     return url;
   }
@@ -65,31 +74,134 @@ std::string parameter::remove_parameter_single(std::string url, CharacterVector 
   return (parsed_url[0] + parsed_url[1]);
 }
 
+// scan for next & separator that is not &amp;
+size_t find_ampersand(std::string query, size_t pos = 0) {
+  while (true) {
+    size_t amp = query.find_first_of("&#", pos);
+    if (amp == std::string::npos) {
+      pos = amp;
+      break;
+    }
+    if (query[amp] == '#') {
+      pos = std::string::npos;
+      break;
+    }
+
+    if (query.compare(amp, 5, "&amp;") == 0) {
+      pos = amp + 1;
+      continue;
+    }
+    pos = amp;
+    break;
+  }
+
+  return pos;
+}
+
+std::deque < std::string > parameter::get_parameter_names_single(std::string url){
+  std::deque < std::string > parsed_entry = get_query_string(url);
+  std::deque < std::string > out;
+  if(parsed_entry.size() < 2){
+    return out;
+  }
+  std::string query = parsed_entry[1];
+  size_t amp = 0;
+  size_t eq;
+  while(amp != std::string::npos) {
+    eq = query.find("=", amp);
+    size_t next_amp = find_ampersand(query, amp+1);
+    if (eq == std::string::npos) {
+      amp = next_amp;
+      continue;
+    }
+    if (next_amp != std::string::npos && eq > next_amp) {
+      amp = next_amp;
+      continue;
+    }
+    out.push_back(query.substr(amp+1, eq-amp-1));
+    amp = next_amp;
+  }
+
+  return out;
+}
+
+CharacterVector parameter::get_parameter_names(CharacterVector &urls) {
+  std::set < std::string > names;
+  for (int i = 0; i < urls.length(); i++) {
+    if((i % 10000) == 0){
+      Rcpp::checkUserInterrupt();
+    }
+    if (urls[i] == R_NaString) {
+      continue;
+    }
+    std::string str = (std::string) urls[i];
+    std::deque < std::string > labels = get_parameter_names_single(str);
+    for (unsigned int j = 0; j < labels.size(); j++) {
+      names.insert(labels[j]);
+    }
+  }
+
+  CharacterVector out(names.size());
+  int ii = 0;
+  for (std::set< std::string >::iterator i = names.begin();
+       i != names.end();
+       ii++, i++) {
+    out[ii] = *i;
+  }
+  return out;
+}
+
+String parameter::get_parameter_single(std::string url, std::string& component){
+  
+  // Extract actual query string
+  std::deque < std::string > parsed_entry = get_query_string(url);
+  if(parsed_entry.size() < 2){
+    return NA_STRING;
+  }
+  std::string holding = parsed_entry[1];
+  int component_size;
+  
+  // ID where the location is
+  size_t first_find = holding.find(component);
+  if(first_find == std::string::npos){
+    return NA_STRING;
+  }
+  if(holding[first_find-1] != '&' && holding[first_find-1] != '?'){
+    first_find = holding.find("&" + component);
+    component_size = (component.size() + 1);
+    if(first_find == std::string::npos){
+      return NA_STRING;
+    }
+  } else {
+    component_size = component.size();
+  }
+  
+  size_t next_location = find_ampersand(holding, first_find + 1);
+
+  if(next_location == std::string::npos) {
+    // check for fragment
+    next_location = holding.find("#", first_find + component_size);
+  }
+  
+  if (next_location == std::string::npos) {
+    return holding.substr(first_find + component_size);
+  }
+
+  return holding.substr(first_find + component_size, (next_location-(first_find + component_size)));
+  
+}
+
 //Parameter retrieval
 CharacterVector parameter::get_parameter(CharacterVector& urls, std::string component){
-  std::size_t component_location;
-  std::size_t next_location;
   unsigned int input_size = urls.size();
-  int component_size = component.length();
   CharacterVector output(input_size);
   component = component + "=";
-  std::string holding;
+  
   for(unsigned int i = 0; i < input_size; ++i){
     if(urls[i] == NA_STRING){
       output[i] = NA_STRING;
     } else {
-      holding = Rcpp::as<std::string>(urls[i]);
-      component_location = holding.find(component);
-      if(component_location == std::string::npos){
-        output[i] = NA_STRING;
-      } else {
-        next_location = holding.find_first_of("&#", component_location + component_size);
-        if(next_location == std::string::npos){
-          output[i] = holding.substr(component_location + component_size + 1);
-        } else {
-          output[i] = holding.substr(component_location + component_size + 1, (next_location-(component_location + component_size + 1)));
-        }
-      }
+      output[i] = get_parameter_single(Rcpp::as<std::string>(urls[i]), component);
     }
   }
   return output;
@@ -172,4 +284,116 @@ CharacterVector parameter::remove_parameter_vectorised(CharacterVector urls,
   
   // Return
   return output;
+}
+
+//'@title get the values of a URL's parameters
+//'@description URLs can have parameters, taking the form of \code{name=value}, chained together
+//'with \code{&} symbols. \code{param_get}, when provided with a vector of URLs and a vector
+//'of parameter names, will generate a data.frame consisting of the values of each parameter
+//'for each URL.
+//'
+//'@param urls a vector of URLs
+//'
+//'@param parameter_names a vector of parameter names. If \code{NULL} (default), will extract
+//'all parameters that are present.
+//'
+//'@return a data.frame containing one column for each provided parameter name. Values that
+//'cannot be found within a particular URL are represented by an NA.
+//'
+//'@examples
+//'#A very simple example
+//'url <- "https://google.com:80/foo.php?this_parameter=selfreferencing&hiphop=awesome"
+//'parameter_values <- param_get(url, c("this_parameter","hiphop"))
+//'
+//'@seealso \code{\link{url_parse}} for decomposing URLs into their constituent parts and
+//'\code{\link{param_set}} for inserting or modifying key/value pairs within a query string.
+//'
+//'@aliases param_get url_parameter
+//'@rdname param_get
+//'@export
+//[[Rcpp::export]]
+List param_get(CharacterVector urls, Nullable<CharacterVector> parameter_names = R_NilValue){
+  CharacterVector param_names;
+  if (parameter_names.isNull()) {
+    param_names = parameter::get_parameter_names(urls);
+  } else {
+    param_names = parameter_names.get();
+  }
+  List output;
+  IntegerVector rownames = Rcpp::seq(1,urls.size());
+  unsigned int column_count = param_names.size();
+  
+  for(unsigned int i = 0; i < column_count; ++i){
+    if((i % 10000) == 0){
+      Rcpp::checkUserInterrupt();
+    }
+    output.push_back(parameter::get_parameter(urls, Rcpp::as<std::string>(param_names[i])));
+  }
+  output.attr("class") = "data.frame";
+  output.attr("names") = param_names;
+  output.attr("row.names") = rownames;
+  return output;
+}
+
+//'@title Set the value associated with a parameter in a URL's query.
+//'@description URLs often have queries associated with them, particularly URLs for
+//'APIs, that look like \code{?key=value&key=value&key=value}. \code{param_set}
+//'allows you to modify key/value pairs within query strings, or even add new ones
+//'if they don't exist within the URL.
+//'
+//'@param urls a vector of URLs. These should be decoded (with \code{url_decode})
+//'but do not have to have been otherwise manipulated.
+//'
+//'@param key a string representing the key to modify the value of (or insert wholesale
+//'if it doesn't exist within the URL).
+//'
+//'@param value a value to associate with the key. This can be a single string,
+//'or a vector the same length as \code{urls}
+//'
+//'@return the original vector of URLs, but with modified/inserted key-value pairs. If the
+//'URL is \code{NA}, the returned value will be - if the key or value are, no insertion
+//'will be made.
+//'
+//'@examples
+//'# Set a URL parameter where there's already a key for that
+//'param_set("https://en.wikipedia.org/api.php?action=query", "action", "pageinfo")
+//'
+//'# Set a URL parameter where there isn't.
+//'param_set("https://en.wikipedia.org/api.php?list=props", "action", "pageinfo")
+//'
+//'@seealso \code{\link{param_get}} to retrieve the values associated with multiple keys in
+//'a vector of URLs, and \code{\link{param_remove}} to strip key/value pairs from a URL entirely.
+//'
+//'@export
+//[[Rcpp::export]]
+CharacterVector param_set(CharacterVector urls, String key, CharacterVector value){
+  return parameter::set_parameter_vectorised(urls, key, value);
+}
+
+//'@title Remove key-value pairs from query strings
+//'@description URLs often have queries associated with them, particularly URLs for
+//'APIs, that look like \code{?key=value&key=value&key=value}. \code{param_remove}
+//'allows you to remove key/value pairs while leaving the rest of the URL intact.
+//'
+//'@param urls a vector of URLs. These should be decoded with \code{url_decode} but don't
+//'have to have been otherwise processed.
+//'
+//'@param keys a vector of parameter keys to remove.
+//'
+//'@return the original URLs but with the key/value pairs specified by \code{keys} removed.
+//'If the original URL is \code{NA}, \code{NA} will be returned; if a specified key is \code{NA},
+//'nothing will be done with it.
+//'
+//'@seealso \code{\link{param_set}} to modify values associated with keys, or \code{\link{param_get}}
+//'to retrieve those values.
+//'
+//'@examples
+//'# Remove multiple parameters from a URL
+//'param_remove(urls = "https://en.wikipedia.org/wiki/api.php?action=list&type=query&format=json",
+//'             keys = c("action","format"))
+//'@export
+//[[Rcpp::export]]
+CharacterVector param_remove(CharacterVector urls, CharacterVector keys){
+  return parameter::remove_parameter_vectorised(urls, keys);
+  
 }

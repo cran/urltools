@@ -1,9 +1,18 @@
 #include "parsing.h"
 
+std::string parsing::string_tolower(std::string str){
+  unsigned int input_size = str.size();
+  for(unsigned int i = 0; i < input_size; i++){
+    str[i] = tolower(str[i]);
+  }
+  return str;
+}
+
 std::string parsing::scheme(std::string& url){
   std::string output;
   std::size_t protocol = url.find("://");
-  if((protocol == std::string::npos) | (protocol > 6)){
+  std::size_t definite_end = url.find(".");
+  if((protocol == std::string::npos) || protocol > definite_end){
     //If that's not present, or isn't present at the /beginning/, unknown
     output = "";
   } else {
@@ -13,19 +22,37 @@ std::string parsing::scheme(std::string& url){
   return output;
 }
 
-std::string parsing::string_tolower(std::string str){
-  unsigned int input_size = str.size();
-  for(unsigned int i = 0; i < input_size; i++){
-    str[i] = tolower(str[i]);
-  }
-  return str;
-}
-
 std::vector < std::string > parsing::domain_and_port(std::string& url){
   
   std::vector < std::string > output(2);
   std::string holding;
   unsigned int output_offset = 0;
+  
+  // Check for the presence of user authentication info. If it exists, dump it.
+  // Use a query-check here because some people put @ info in params, baaah
+  std::size_t f_param = url.find("?");
+  std::size_t auth;
+  if(f_param != std::string::npos){
+    auth = url.substr(0, f_param).find("@");
+  } else {
+    auth = url.find("@");
+  }
+  if(auth != std::string::npos){
+    url = url.substr(auth+1);
+  }
+  
+  // ID IPv6(?)
+  if(url.size() && url[0] == '['){
+    std::size_t ipv6_end = url.find("]");
+    if(ipv6_end != std::string::npos){
+      output[0] = url.substr(1,(ipv6_end-1));
+      if(ipv6_end == url.size()-1){
+        url = "";
+        return output;
+      }
+      url = url.substr(ipv6_end+1);
+    }
+  }
   
   // Identify the port. If there is one, push everything
   // before that straight into the output, and the remainder
@@ -34,7 +61,7 @@ std::vector < std::string > parsing::domain_and_port(std::string& url){
   std::size_t port = url.find(":");
   
   if(port != std::string::npos && url.find("/") >= port){
-    output[0] = url.substr(0,port);
+    output[0] += url.substr(0,port);
     holding = url.substr(port+1);
     output_offset++;
   } else {
@@ -52,7 +79,8 @@ std::vector < std::string > parsing::domain_and_port(std::string& url){
     return output;
   }
   
-  // If not, there might be a query parameter associated
+  // If not, there might be a query parameter or fragment
+  // associated
   // with the base URL, which we need to preserve.
   std::size_t param = holding.find("?");
   
@@ -61,6 +89,13 @@ std::vector < std::string > parsing::domain_and_port(std::string& url){
     output[output_offset] = holding.substr(0, param);
     url = holding.substr(param);
     return output;
+  } else {
+    std::size_t frag = holding.find("#");
+    if(frag != std::string::npos){
+      output[output_offset] = holding.substr(0, frag);
+      url = holding.substr(frag);
+      return output;
+    }
   }
   
   // Otherwise we're done here
@@ -147,9 +182,10 @@ String parsing::get_component(std::string url, int component){
 }
 
 //Component modification
-String parsing::set_component(std::string url, int component, String new_value){
+String parsing::set_component(std::string url, int component, String new_value,
+                              bool rm){
   
-  if(new_value == NA_STRING){
+  if(new_value == NA_STRING && !rm){
     return NA_STRING;
   }
   std::string output;
@@ -235,4 +271,244 @@ DataFrame parsing::parse_to_df(CharacterVector& urls_ptr){
                            _["parameter"] = parameters,
                            _["fragment"] = fragments,
                            _["stringsAsFactors"] = false);
+}
+
+//'@title split URLs into their component parts
+//'@description \code{url_parse} takes a vector of URLs and splits each one into its component
+//'parts, as recognised by RfC 3986.
+//'
+//'@param urls a vector of URLs
+//'
+//'@details It's useful to be able to take a URL and split it out into its component parts - 
+//'for the purpose of hostname extraction, for example, or analysing API calls. This functionality
+//'is not provided in base R, although it is provided in \code{\link[httr]{parse_url}}; that
+//'implementation is entirely in R, uses regular expressions, and is not vectorised. It's
+//'perfectly suitable for the intended purpose (decomposition in the context of automated
+//'HTTP requests from R), but not for large-scale analysis.
+//'
+//'Note that user authentication/identification information is not extracted;
+//'this can be found with \code{\link{get_credentials}}.
+//'
+//'@return a data.frame consisting of the columns scheme, domain, port, path, query
+//'and fragment. See the '\href{http://tools.ietf.org/html/rfc3986}{relevant IETF RfC} for
+//'definitions. If an element cannot be identified, it is represented by an empty string.
+//'
+//'@examples
+//'url_parse("https://en.wikipedia.org/wiki/Article")
+//'
+//'@seealso \code{\link{param_get}} for extracting values associated with particular keys in a URL's
+//'query string, and \code{\link{url_compose}}, which is \code{url_parse} in reverse.
+//'
+//'@export
+//[[Rcpp::export]]
+DataFrame url_parse(CharacterVector urls){
+  CharacterVector& urls_ptr = urls;
+  return parsing::parse_to_df(urls_ptr);
+}
+
+//[[Rcpp::export]]
+CharacterVector get_component_(CharacterVector urls, int component){
+  unsigned int input_size = urls.size();
+  CharacterVector output(input_size);
+  for (unsigned int i = 0; i < input_size; ++i){
+    if((i % 10000) == 0){
+      Rcpp::checkUserInterrupt();
+    }
+    if(urls[i] != NA_STRING){
+      output[i] = parsing::get_component(Rcpp::as<std::string>(urls[i]), component);
+    } else {
+      output[i] = NA_STRING;
+    }
+  }
+  return output;
+}
+
+//[[Rcpp::export]]
+CharacterVector set_component_(CharacterVector urls, int component,
+                               CharacterVector new_value){
+  unsigned int input_size = urls.size();
+  CharacterVector output(input_size);
+  
+  if(new_value.size() == 1){
+    for (unsigned int i = 0; i < input_size; ++i){
+      if((i % 10000) == 0){
+        Rcpp::checkUserInterrupt();
+      }
+      
+      output[i] = parsing::set_component(Rcpp::as<std::string>(urls[i]), component, new_value[0], false);
+    }
+  } else if(new_value.size() == input_size){
+    for (unsigned int i = 0; i < input_size; ++i){
+      if((i % 10000) == 0){
+        Rcpp::checkUserInterrupt();
+      }
+      
+      output[i] = parsing::set_component(Rcpp::as<std::string>(urls[i]), component, new_value[i], false);
+    }
+  } else {
+    Rcpp::stop("The number of new values must either be 1, or match the number of URLs");
+  }
+
+  return output;
+}
+
+//[[Rcpp::export]]
+CharacterVector set_component_r(CharacterVector urls, int component,
+                                CharacterVector new_value,
+                                std::string comparator){
+  
+  // Output object
+  unsigned int input_size = urls.size();
+  CharacterVector output(input_size);
+  
+  // Comparator checking objects
+  std::string holding;
+  String to_use;
+  unsigned int holding_size;
+  unsigned int comparator_length = comparator.size();
+  
+  // Otherwise, if we've got a single value, iterate
+  if(new_value.size() == 1){
+    if(new_value[0] == NA_STRING){
+      to_use = new_value[0];
+    } else {
+      holding = new_value[0];
+      holding_size = holding.size();
+      if(holding_size < comparator_length){
+        to_use = holding;
+      } else {
+        if(holding.substr((holding_size - comparator_length), comparator_length) == comparator){
+          to_use = holding.substr(0, (holding_size - comparator_length));
+        } else {
+          to_use = holding;
+        }
+      }
+    }
+    for(unsigned int i = 0; i < input_size; i++){
+      if((i % 10000) == 0){
+        Rcpp::checkUserInterrupt();
+      }
+        
+      output[i] = parsing::set_component(Rcpp::as<std::string>(urls[i]), component, to_use, false);
+    }
+    // If we've got multiple values, it's just a rejigging of the same
+  } else if(new_value.size() == input_size){
+    
+    for(unsigned int i = 0; i < input_size; i++){
+      if((i % 10000) == 0){
+        Rcpp::checkUserInterrupt();
+      }
+      
+      if(new_value[i] == NA_STRING){
+        to_use = new_value[i];
+      } else {
+        holding = new_value[i];
+        holding_size = holding.size();
+        if(holding_size < comparator_length){
+          to_use = holding;
+        } else {
+          if(holding.substr((holding_size - comparator_length), comparator_length) == comparator){
+            to_use = holding.substr(0, (holding_size - comparator_length));
+          } else {
+            to_use = holding;
+          }
+        }
+      }
+      output[i] = parsing::set_component(Rcpp::as<std::string>(urls[i]), component, to_use, false);
+    }
+  } else {
+    Rcpp::stop("The number of new values must either be 1, or match the number of URLs");
+  }
+  
+  return output;
+  
+}
+
+//[[Rcpp::export]]
+CharacterVector set_component_f(CharacterVector urls, int component,
+                                CharacterVector new_value,
+                                std::string comparator){
+  
+  // Output object
+  unsigned int input_size = urls.size();
+  CharacterVector output(input_size);
+  
+  // Comparator checking objects
+  std::string holding;
+  String to_use;
+  unsigned int holding_size;
+  unsigned int comparator_length = comparator.size();
+  
+  // Otherwise, if we've got a single value, iterate
+  if(new_value.size() == 1){
+    if(new_value[0] == NA_STRING){
+      to_use = new_value[0];
+    } else {
+      holding = new_value[0];
+      holding_size = holding.size();
+      if(holding_size < comparator_length){
+        to_use = holding;
+      } else {
+        if(holding.substr(0, comparator_length) == comparator){
+          to_use = holding.substr(comparator_length, (holding_size - comparator_length));
+        } else {
+          to_use = holding;
+        }
+      }
+    }
+    for(unsigned int i = 0; i < input_size; i++){
+      if((i % 10000) == 0){
+        Rcpp::checkUserInterrupt();
+      }
+      
+      output[i] = parsing::set_component(Rcpp::as<std::string>(urls[i]), component, to_use, false);
+    }
+    // If we've got multiple values, it's just a rejigging of the same
+  } else if(new_value.size() == input_size){
+    
+    for(unsigned int i = 0; i < input_size; i++){
+      if((i % 10000) == 0){
+        Rcpp::checkUserInterrupt();
+      }
+      
+      if(new_value[i] == NA_STRING){
+        to_use = new_value[i];
+      } else {
+        holding = new_value[i];
+        holding_size = holding.size();
+        if(holding_size < comparator_length){
+          to_use = holding;
+        } else {
+          if(holding.substr(0, comparator_length) == comparator){
+            to_use = holding.substr(comparator_length, (holding_size - comparator_length));
+          } else {
+            to_use = holding;
+          }
+        }
+      }
+      output[i] = parsing::set_component(Rcpp::as<std::string>(urls[i]), component, to_use, false);
+    }
+  } else {
+    Rcpp::stop("The number of new values must either be 1, or match the number of URLs");
+  }
+  
+  return output;
+}
+
+//[[Rcpp::export]]
+CharacterVector rm_component_(CharacterVector urls, int component){
+  
+  if(component < 2){
+    Rcpp::stop("Scheme and domain are required components");
+  }
+  unsigned int input_size = urls.size();
+  CharacterVector output(input_size);
+  for (unsigned int i = 0; i < input_size; ++i){
+    if((i % 10000) == 0){
+      Rcpp::checkUserInterrupt();
+    }
+    
+    output[i] = parsing::set_component(Rcpp::as<std::string>(urls[i]), component, NA_STRING, true);
+  }
+  return output;
 }

@@ -6,16 +6,8 @@
 #' web-related datasets, such as server-side logs.
 #' 
 #' @seealso the \href{https://CRAN.R-project.org/package=urltools/vignettes/urltools.html}{package vignette}.
-#' @useDynLib urltools
+#' @useDynLib urltools, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
 #' @docType package
 #' @aliases urltools urltools-package
 NULL
-
-#'@rdname param_get
-#'@export
-url_parameters <- function(urls, parameter_names){
-  .Deprecated("param_get",
-              old = as.character(sys.call(sys.parent()))[1L])
-  return(param_get(urls, parameter_names))
-}

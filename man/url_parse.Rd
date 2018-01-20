@@ -25,13 +25,15 @@ is not provided in base R, although it is provided in \code{\link[httr]{parse_ur
 implementation is entirely in R, uses regular expressions, and is not vectorised. It's
 perfectly suitable for the intended purpose (decomposition in the context of automated
 HTTP requests from R), but not for large-scale analysis.
+
+Note that user authentication/identification information is not extracted;
+this can be found with \code{\link{get_credentials}}.
 }
 \examples{
 url_parse("https://en.wikipedia.org/wiki/Article")
 
 }
 \seealso{
-\code{\link{url_parameters}} for extracting values associated with particular keys in a URL's
+\code{\link{param_get}} for extracting values associated with particular keys in a URL's
 query string, and \code{\link{url_compose}}, which is \code{url_parse} in reverse.
 }
-
