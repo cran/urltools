@@ -1,8 +1,8 @@
 Package: urltools
 Type: Package
 Title: Vectorised Tools for URL Handling and Parsing
-Version: 1.7.0
-Date: 2018-01-19
+Version: 1.7.1
+Date: 2018-07-26
 Author: Oliver Keyes [aut, cre], Jay Jacobs [aut, cre], Drew Schmidt [aut],
     Mark Greenaway [ctb], Bob Rudis [ctb], Alex Pinto [ctb], Maryam Khezrzadeh [ctb], Peter Meilstrup [ctb],
     Adam M. Costello [cph], Jeff Bezanson [cph], Peter Meilstrup [ctb], Xueyuan Jiang [ctb]
@@ -25,6 +25,6 @@ RoxygenNote: 6.0.1
 Encoding: UTF-8
 Depends: R (>= 2.10)
 NeedsCompilation: yes
-Packaged: 2018-01-20 06:20:09 UTC; ironholds
+Packaged: 2018-07-26 18:36:17 UTC; ironholds
 Repository: CRAN
-Date/Publication: 2018-01-20 15:39:44 UTC
+Date/Publication: 2018-08-03 08:20:02 UTC
