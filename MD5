@@ -1,7 +1,7 @@
-e38f940261a9f9a001e527414cd015fe *DESCRIPTION
+ad5bfb130c25e13184d77a1b3582419f *DESCRIPTION
 1d9678dbfe1732b5d2c521e07b2ceef0 *LICENSE
 142670d75fc584449972d5f768788087 *NAMESPACE
-fe71cbd2585813e2ade2c7e41a607012 *NEWS
+3322c12fb0a3a4dd7e757d236779263e *NEWS
 39c4adbbe3d494fd1eef949f9e836681 *R/RcppExports.R
 71642924416c94dd3d00a197e8fe73a4 *R/accessors.R
 0b91de76ad403feb319813267da98567 *R/suffix.R
@@ -54,7 +54,7 @@ b4e4b506528208635ead995600c538ba *src/punycode.h
 3333d69c11f25242049d1d226d599b94 *src/utf8.h
 9e9970bb4d6e50ba34bab76c8bebcfc6 *tests/testthat.R
 d60ec79be0b027f30b5d177f38f8c351 *tests/testthat/test_credentials.R
-c0b933002b31928f40619e598b2f29f0 *tests/testthat/test_encoding.R
+ba94a086f304c30eae149bb5727f6447 *tests/testthat/test_encoding.R
 f48623bc12f52ce3f1d1ab10da726938 *tests/testthat/test_get_set.R
 97a5e4be008b21d5b0c97df21f576c51 *tests/testthat/test_memory.R
 f26f5d4a938bbac141489bd4dbd2dd77 *tests/testthat/test_parameters.R
