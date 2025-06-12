@@ -28,7 +28,7 @@ Base R provides \code{\link{URLdecode}} and \code{\link{URLencode}}, which handl
 URL encoding - in theory. In practise, they have a set of substantial problems
 that the urltools implementation solves::
 
-\itemize{
+\describe{
 \item{No vectorisation: }{Both base R functions operate on single URLs, not vectors of URLs.
       This means that, when confronted with a vector of URLs that need encoding or
       decoding, your only option is to loop from within R. This can be incredibly
